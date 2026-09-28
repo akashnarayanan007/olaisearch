@@ -1,0 +1,31 @@
+# Model configuration
+# Update these with actual model IDs from OmniRoute
+
+# VLM for OCR (vision-language model)
+vlm_ocr:
+  primary: "gpt-4-vision-preview"
+  fallback: "claude-3-opus-20240229"
+
+# Text LLM for translation, correction, chat
+text_llm:
+  primary: "gpt-4-turbo-preview"
+  fallback: "claude-3-sonnet-20240229"
+
+# Translator
+translator:
+  primary: "gpt-4-turbo-preview"
+
+# Embedder for search
+embedder:
+  primary: "text-embedding-3-large"
+  fallback: "local"  # Will use sentence-transformers locally
+
+# Reranker (optional)
+reranker:
+  primary: "gpt-4-turbo-preview"
+  fallback: null
+
+# Chat LLM for ManuscriptChat
+chat_llm:
+  primary: "gpt-4-turbo-preview"
+  fallback: "claude-3-sonnet-20240229"
