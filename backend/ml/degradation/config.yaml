@@ -1,0 +1,81 @@
+# Degradation configuration
+# All parameters support ranges for random variation
+
+# Palm leaf texture
+texture:
+  height: 1000
+  width: 3000
+  base_color_r: [210, 230]  # Range for randomization
+  base_color_g: [190, 210]
+  base_color_b: [140, 160]
+
+# Text rendering
+text_rendering:
+  font_size: [32, 48]  # Random size per line
+  line_spacing: [50, 70]
+  margin_left: 100
+  margin_right: 100
+  margin_top: 80
+  text_color: [0, 0, 0]  # Black ink
+  elastic_distortion: true
+  distortion_alpha: [30, 50]  # Elastic distortion strength
+  distortion_sigma: [5, 8]
+
+# Damage models (probabilities and severities)
+damage:
+  water_stains:
+    enabled: true
+    probability: 0.7
+    num_stains: [1, 4]
+    severity: [0.2, 0.4]
+
+  ink_fade:
+    enabled: true
+    probability: 0.8
+    fade_factor: [0.2, 0.5]
+
+  ink_bleed:
+    enabled: true
+    probability: 0.6
+    blur_sigma: [1.0, 2.5]
+
+  holes:
+    enabled: true
+    probability: 0.5
+    num_holes: [2, 8]
+    hole_type: "mixed"  # "string", "insect", "mixed"
+
+  uneven_lighting:
+    enabled: true
+    probability: 0.9
+    intensity: [0.2, 0.4]
+
+  camera_effects:
+    enabled: true
+    probability: 1.0
+    blur_sigma: [0.5, 1.5]
+    noise_stddev: [3.0, 8.0]
+
+# Degradation levels (presets)
+levels:
+  clean:
+    water_stains: {enabled: false}
+    ink_fade: {enabled: false}
+    holes: {enabled: false}
+    camera_effects: {blur_sigma: [0.3, 0.6], noise_stddev: [1.0, 3.0]}
+
+  light:
+    water_stains: {severity: [0.1, 0.2]}
+    ink_fade: {fade_factor: [0.1, 0.2]}
+    holes: {num_holes: [1, 3]}
+    camera_effects: {blur_sigma: [0.5, 1.0], noise_stddev: [3.0, 5.0]}
+
+  medium:
+    # Use default config
+
+  heavy:
+    water_stains: {num_stains: [3, 6], severity: [0.4, 0.6]}
+    ink_fade: {fade_factor: [0.5, 0.7]}
+    ink_bleed: {blur_sigma: [2.0, 3.5]}
+    holes: {num_holes: [5, 12]}
+    camera_effects: {blur_sigma: [1.5, 2.5], noise_stddev: [8.0, 15.0]}
