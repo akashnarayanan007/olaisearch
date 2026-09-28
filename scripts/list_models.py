@@ -1,4 +1,4 @@
-"""Script to list available models from OmniRoute."""
+﻿"""Script to list available models from OmniRoute."""
 import asyncio
 import sys
 from pathlib import Path

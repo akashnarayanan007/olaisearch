@@ -1,4 +1,4 @@
-"""Damage models for palm-leaf degradation.
+﻿"""Damage models for palm-leaf degradation.
 
 Physically-motivated damage that occurs on real palm-leaf manuscripts:
 - Water stains from humidity/flooding

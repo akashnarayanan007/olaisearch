@@ -1,4 +1,4 @@
-"""Classical image restoration techniques for palm-leaf manuscripts.
+﻿"""Classical image restoration techniques for palm-leaf manuscripts.
 
 Techniques applied:
 1. Background flattening (morphological operations)
@@ -90,18 +90,27 @@ class ClassicalRestoration:
             logger.warning("deskew_failed", reason="not_enough_text")
             return image, 0.0
 
-        # Fit min area rectangle
-        rect = cv2.minAreaRect(coords)
-        angle = rect[-1]
+        # Compute skew angle using OpenCV's fitLine.
+        # fitLine gives a better estimate of the main axis direction than minAreaRect
+        # for thin text regions.
 
-        # Correct angle to [-45, 45]
-        if angle < -45:
-            angle = 90 + angle
+        # fitLine returns (vx, vy, x0, y0) where line is (x,y) = (x0,y0) + t*(vx,vy)
+        line = cv2.fitLine(coords, cv2.DIST_L2, 0, 0.01, 0.01)
+        vx, vy, x0, y0 = line.flatten()
 
-        # Rotate image
+        # Angle of the fitted line (main axis of text region)
+        angle_rad = np.arctan2(vy, vx)
+        angle_deg = float(np.degrees(angle_rad))
+
+        # Normalize to [0, 45] range (absolute skew from horizontal)
+        angle = abs(angle_deg)
+        if angle > 45.0:
+            angle = 90.0 - angle
+
+        # Rotate image to correct skew
         h, w = image.shape
         center = (w // 2, h // 2)
-        M = cv2.getRotationMatrix2D(center, angle, 1.0)
+        M = cv2.getRotationMatrix2D(center, -angle, 1.0)
         deskewed = cv2.warpAffine(
             image, M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE
         )
@@ -130,36 +139,35 @@ class ClassicalRestoration:
         h_proj = np.sum(binary, axis=1)  # Horizontal projection (sum across width)
         v_proj = np.sum(binary, axis=0)  # Vertical projection (sum across height)
 
-        # Find top border (first row with significant text)
-        margin_h = int(h * margin_ratio)
+        threshold_h = np.max(h_proj) * 0.05 if np.max(h_proj) > 0 else 1
+        threshold_v = np.max(v_proj) * 0.05 if np.max(v_proj) > 0 else 1
+
+        # Find top border: first row with significant text
         top = 0
-        threshold_h = np.max(h_proj) * 0.1
-        for i in range(margin_h):
+        for i in range(h):
             if h_proj[i] > threshold_h:
                 top = i
                 break
 
-        # Find bottom border
+        # Find bottom border: distance from last row with text to image bottom
         bottom = 0
-        for i in range(h - 1, h - margin_h, -1):
+        for i in range(h - 1, -1, -1):
             if h_proj[i] > threshold_h:
-                bottom = h - i - 1
+                bottom = h - 1 - i
                 break
 
-        # Find left border
-        margin_w = int(w * margin_ratio)
+        # Find left border: first column with significant text
         left = 0
-        threshold_v = np.max(v_proj) * 0.1
-        for i in range(margin_w):
+        for i in range(w):
             if v_proj[i] > threshold_v:
                 left = i
                 break
 
-        # Find right border
+        # Find right border: distance from last column with text to image right
         right = 0
-        for i in range(w - 1, w - margin_w, -1):
+        for i in range(w - 1, -1, -1):
             if v_proj[i] > threshold_v:
-                right = w - i - 1
+                right = w - 1 - i
                 break
 
         logger.debug("borders_detected", top=top, bottom=bottom, left=left, right=right)

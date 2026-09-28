@@ -1,4 +1,4 @@
-"""SQLite database with FTS5 full-text search for the vertical slice."""
+﻿"""SQLite database with FTS5 full-text search for the vertical slice."""
 import sqlite3
 from typing import List, Optional, Dict, Any
 from pathlib import Path

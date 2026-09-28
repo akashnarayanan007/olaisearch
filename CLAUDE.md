@@ -1,4 +1,4 @@
-# OlaiSearch - Development Guide
+﻿# OlaiSearch - Development Guide
 
 This document contains commands, conventions, and architecture notes for working on OlaiSearch.
 

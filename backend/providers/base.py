@@ -1,4 +1,4 @@
-"""Provider abstraction layer base classes."""
+﻿"""Provider abstraction layer base classes."""
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass

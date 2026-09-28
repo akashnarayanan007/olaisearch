@@ -1,4 +1,4 @@
-"""Integration test for the vertical slice: upload → OCR → search."""
+﻿"""Integration test for the vertical slice: upload → OCR → search."""
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path

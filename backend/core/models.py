@@ -1,4 +1,4 @@
-"""Core data models."""
+﻿"""Core data models."""
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
@@ -30,6 +30,7 @@ class Line(BaseModel):
     script: Optional[str] = None
     alternatives: List[OCRAlternative] = Field(default_factory=list)
     char_confidences: List[float] = Field(default_factory=list)
+    ocr: Optional[OCRResult] = None
 
 
 class Manuscript(BaseModel):
@@ -53,8 +54,8 @@ class OCRResult(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
     char_confidences: List[float] = Field(default_factory=list)
     alternatives: List[OCRAlternative] = Field(default_factory=list)
-    recognizer: str
-    processing_time_ms: float
+    recognizer: str = "unknown"
+    processing_time_ms: float = 0.0
 
 
 class SearchResult(BaseModel):
@@ -88,3 +89,8 @@ class ChatResponse(BaseModel):
     evidence_tiers_used: List[str] = Field(default_factory=list)
     uncertainty_notes: List[str] = Field(default_factory=list)
     follow_up_suggestions: List[str] = Field(default_factory=list)
+
+    @property
+    def response(self) -> str:
+        """Alias for ``answer`` to support attribute-style access."""
+        return self.answer

@@ -1,4 +1,4 @@
-"""Structured logging setup."""
+﻿"""Structured logging setup."""
 import logging
 import sys
 import structlog

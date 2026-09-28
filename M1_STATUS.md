@@ -1,4 +1,4 @@
-# M1 Milestone Complete - Status Report
+﻿# M1 Milestone Complete - Status Report
 
 ## ✅ Delivered: Scaffolding & End-to-End Vertical Slice
 

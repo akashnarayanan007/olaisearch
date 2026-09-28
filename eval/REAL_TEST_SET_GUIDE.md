@@ -1,4 +1,4 @@
-# Real Palm-Leaf Manuscript Test Set - Collection & Labeling Guide
+﻿# Real Palm-Leaf Manuscript Test Set - Collection & Labeling Guide
 
 ## Purpose
 

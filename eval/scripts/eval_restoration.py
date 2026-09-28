@@ -1,4 +1,4 @@
-"""Evaluation script for restoration models.
+﻿"""Evaluation script for restoration models.
 
 Compares:
 - No restoration (baseline)

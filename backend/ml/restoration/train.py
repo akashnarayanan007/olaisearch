@@ -1,4 +1,4 @@
-"""Training script for U-Net restoration model.
+﻿"""Training script for U-Net restoration model.
 
 Usage:
     python backend/ml/restoration/train.py \

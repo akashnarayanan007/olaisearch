@@ -1,4 +1,4 @@
-"""Validate labeled manuscript JSON files.
+﻿"""Validate labeled manuscript JSON files.
 
 Checks:
 - All required fields present

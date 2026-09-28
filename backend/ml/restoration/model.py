@@ -1,4 +1,4 @@
-"""U-Net architecture for image restoration.
+﻿"""U-Net architecture for image restoration.
 
 Based on the original U-Net paper (Ronneberger et al., 2015) but adapted
 for palm-leaf manuscript restoration:

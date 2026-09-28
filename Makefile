@@ -1,4 +1,4 @@
-.PHONY: help install dev test lint type-check clean eval
+﻿.PHONY: help install dev test lint type-check clean eval
 
 help:  ## Show this help message
 	@echo "OlaiSearch - Available commands:"

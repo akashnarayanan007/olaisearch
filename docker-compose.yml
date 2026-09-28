@@ -1,0 +1,63 @@
+# OlaiSearch Docker Compose
+# Start all services: API server, Redis cache, frontend dev server
+# Usage: docker-compose up -d
+
+version: '3.9'
+
+services:
+  # ─── API server ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OMNIROUTE_BASE_URL=${OMNIROUTE_BASE_URL:-https://api.omniroute.ai/v1}
+      - OMNIROUTE_API_KEY=${OMNIROUTE_API_KEY}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///olaisearch.db}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - sqlite_data:/app/data
+      - ./data/synthetic:/app/data/synthetic:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ─── Redis cache (for response caching + session store) ──────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Frontend (dev mode behind nginx) ───────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../Dockerfile.frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+  redis_data:

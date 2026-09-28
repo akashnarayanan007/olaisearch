@@ -1,4 +1,4 @@
-# M2 Milestone Complete - Status Report
+﻿# M2 Milestone Complete - Status Report
 
 ## ✅ Delivered: Synthetic Degradation Engine + Real Test Set Instructions
 

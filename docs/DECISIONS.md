@@ -1,4 +1,4 @@
-# M1: Scaffolding & End-to-End Vertical Slice
+﻿# M1: Scaffolding & End-to-End Vertical Slice
 
 ## Overview
 This milestone establishes the project foundation and delivers a working demo from day 1.

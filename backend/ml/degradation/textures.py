@@ -1,4 +1,4 @@
-"""Palm-leaf texture generation using Perlin noise."""
+﻿"""Palm-leaf texture generation using Perlin noise."""
 import numpy as np
 from typing import Tuple
 from scipy.ndimage import gaussian_filter

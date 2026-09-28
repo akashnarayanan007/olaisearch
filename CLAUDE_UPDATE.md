@@ -1,4 +1,4 @@
-"""Update CLAUDE.md with M3 progress."""
+﻿"""Update CLAUDE.md with M3 progress."""
 
 Update the "Current Milestone: M1" section to:
 

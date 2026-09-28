@@ -1,4 +1,4 @@
-"""Core configuration using pydantic-settings."""
+﻿"""Core configuration using pydantic-settings."""
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

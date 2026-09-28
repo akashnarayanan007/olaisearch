@@ -1,4 +1,4 @@
-"""Main palm-leaf degradation generator.
+﻿"""Main palm-leaf degradation generator.
 
 Generates synthetic palm-leaf manuscript images with:
 1. Realistic palm-leaf texture (Perlin noise)
