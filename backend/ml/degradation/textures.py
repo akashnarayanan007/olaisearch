@@ -22,31 +22,60 @@ def generate_perlin_noise_2d(
     def f(t):
         return 6 * t**5 - 15 * t**4 + 10 * t**3
 
-    delta = (res[0] / shape[0], res[1] / shape[1])
-    d = (shape[0] // res[0], shape[1] // res[1])
-    grid = np.mgrid[0:res[0]:delta[0], 0:res[1]:delta[1]].transpose(1, 2, 0) % 1
+    # Cell dimensions
+    cell_w, cell_h = shape[1] / res[1], shape[0] / res[0]
 
-    # Gradients
+    # Create grid of points (y, x) for interpolation
+    y, x = np.mgrid[0:shape[0], 0:shape[1]]
+    x_norm = x / shape[1] * res[1]
+    y_norm = y / shape[0] * res[0]
+
+    # Integer cell indices
+    x0 = np.floor(x_norm).astype(int)
+    y0 = np.floor(y_norm).astype(int)
+    x1 = x0 + 1
+    y1 = y0 + 1
+
+    # Fractional part within cell
+    fx = x_norm - x0
+    fy = y_norm - y0
+
+    # Gradients at grid points (res[0]+1) x (res[1]+1)
     angles = 2 * np.pi * rng.random((res[0] + 1, res[1] + 1))
-    gradients = np.dstack((np.cos(angles), np.sin(angles)))
+    gradients_x = np.cos(angles)
+    gradients_y = np.sin(angles)
 
-    g00 = gradients[0:-1, 0:-1].repeat(d[0], 0).repeat(d[1], 1)
-    g10 = gradients[1:, 0:-1].repeat(d[0], 0).repeat(d[1], 1)
-    g01 = gradients[0:-1, 1:].repeat(d[0], 0).repeat(d[1], 1)
-    g11 = gradients[1:, 1:].repeat(d[0], 0).repeat(d[1], 1)
+    # Clamp indices to valid range
+    x1 = np.clip(x1, 0, res[1])
+    y1 = np.clip(y1, 0, res[0])
 
-    # Ramps
-    n00 = np.sum(grid * g00, 2)
-    n10 = np.sum(np.dstack((grid[:, :, 0] - 1, grid[:, :, 1])) * g10, 2)
-    n01 = np.sum(np.dstack((grid[:, :, 0], grid[:, :, 1] - 1)) * g01, 2)
-    n11 = np.sum(np.dstack((grid[:, :, 0] - 1, grid[:, :, 1] - 1)) * g11, 2)
+    # Dot products at four corners
+    g00_x = gradients_x[y0, x0]
+    g00_y = gradients_y[y0, x0]
+    g00 = g00_x * fx + g00_y * fy
 
-    # Interpolation
-    t = f(grid)
-    n0 = n00 * (1 - t[:, :, 0]) + t[:, :, 0] * n10
-    n1 = n01 * (1 - t[:, :, 0]) + t[:, :, 0] * n11
+    g10_x = gradients_x[y0, x1]
+    g10_y = gradients_y[y0, x1]
+    g10 = (g10_x * (fx - 1)) + g10_y * fy
 
-    return np.sqrt(2) * ((1 - t[:, :, 1]) * n0 + t[:, :, 1] * n1)
+    g01_x = gradients_x[y1, x0]
+    g01_y = gradients_y[y1, x0]
+    g01 = g01_x * fx + (g01_y * (fy - 1))
+
+    g11_x = gradients_x[y1, x1]
+    g11_y = gradients_y[y1, x1]
+    g11 = (g11_x * (fx - 1)) + (g11_y * (fy - 1))
+
+    # Smooth interpolation
+    sx = f(fx)
+    sy = f(fy)
+
+    # Interpolate
+    nx0 = g00 * (1 - sx) + g10 * sx
+    nx1 = g01 * (1 - sx) + g11 * sx
+    noise = nx0 * (1 - sy) + nx1 * sy
+
+    return noise
 
 
 def generate_palm_leaf_texture(
