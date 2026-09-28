@@ -333,12 +333,16 @@ if __name__ == "__main__":
     for i in range(args.count):
         text = sample_texts[i % len(sample_texts)]
         seed = args.seed + i
+        sample_dir = output_dir / f"sample_{i:04d}"
+
+        # Create sample directory
+        sample_dir.mkdir(parents=True, exist_ok=True)
 
         result = generator.generate(text, seed=seed, level=args.level)
 
-        # Save images
-        cv2.imwrite(str(output_dir / f"degraded_{i:04d}.jpg"), result['degraded'])
-        cv2.imwrite(str(output_dir / f"clean_{i:04d}.jpg"), result['clean'])
+        # Save images to sample directory
+        cv2.imwrite(str(sample_dir / "degraded.jpg"), result['degraded'])
+        cv2.imwrite(str(sample_dir / "clean.jpg"), result['clean'])
 
         # Save labels
         labels = {
@@ -346,7 +350,7 @@ if __name__ == "__main__":
             'bboxes': result['bboxes'],
             'metadata': result['metadata'],
         }
-        with open(output_dir / f"labels_{i:04d}.json", 'w', encoding='utf-8') as f:
+        with open(sample_dir / "labels.json", 'w', encoding='utf-8') as f:
             json.dump(labels, f, ensure_ascii=False, indent=2)
 
         print(f"Generated sample {i+1}/{args.count}")
