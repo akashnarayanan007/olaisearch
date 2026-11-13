@@ -251,6 +251,6 @@ If you utilize OlaiSearch in your digital humanities or document analysis resear
   title = {OlaiSearch: Palm-Leaf Manuscript Digitization and Hybrid Retrieval Platform},
   year = {2026},
   publisher = {GitHub},
-  url = {https://github.com/yourusername/olaisearch}
+  url = {https://github.com/akashnarayanan007/olaisearch}
 }
 ```
