@@ -4,8 +4,8 @@
  * Renders a uploaded/manuscript image with optional detection boxes
  * drawn as an SVG overlay (no external library dependency).
  */
-import React, { useState, useRef, useCallback } from 'react'
-import { ZoomIn, ZoomOut, Maximize, RotateCw, Info } from 'lucide-react'
+import { useState, useRef, useCallback } from 'react'
+import { ZoomIn, RotateCw, Info } from 'lucide-react'
 
 export default function ManuscriptViewer({ imageSrc, lines, loading }) {
   const containerRef = useRef(null)
@@ -145,8 +145,6 @@ export default function ManuscriptViewer({ imageSrc, lines, loading }) {
 
 function BBoxOverlay({ lines, imageW, imageH, selected, onSelect }) {
   if (!lines || lines.length === 0 || !imageW) return null
-  const ratioX = imageW / imageW
-  const ratioY = imageH / imageH
 
   return (
     <svg

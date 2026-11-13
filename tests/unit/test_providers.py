@@ -1,10 +1,11 @@
 ﻿"""Test the provider abstraction layer."""
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from backend.providers.omniroute import OmniRouteProvider
-from backend.providers.base import ProviderConfig
+import pytest
+
 from backend.core.exceptions import ProviderException
+from backend.providers.base import ProviderConfig
+from backend.providers.omniroute import OmniRouteProvider
 
 
 @pytest.fixture

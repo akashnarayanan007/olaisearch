@@ -1,11 +1,11 @@
-﻿"""Palm-leaf texture generation using Perlin noise."""
+"""Palm-leaf texture generation using Perlin noise."""
+
 import numpy as np
-from typing import Tuple
 from scipy.ndimage import gaussian_filter
 
 
 def generate_perlin_noise_2d(
-    shape: Tuple[int, int], res: Tuple[int, int], seed: int = 0
+    shape: tuple[int, int], res: tuple[int, int], seed: int = 0
 ) -> np.ndarray:
     """Generate 2D Perlin noise.
 
@@ -21,9 +21,6 @@ def generate_perlin_noise_2d(
 
     def f(t):
         return 6 * t**5 - 15 * t**4 + 10 * t**3
-
-    # Cell dimensions
-    cell_w, cell_h = shape[1] / res[1], shape[0] / res[0]
 
     # Create grid of points (y, x) for interpolation
     y, x = np.mgrid[0:shape[0], 0:shape[1]]

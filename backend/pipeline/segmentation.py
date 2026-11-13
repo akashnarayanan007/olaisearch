@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import cv2
 import numpy as np
@@ -32,7 +32,7 @@ class SegmentedLine:
     height: int
     reading_order: int
     confidence: float = 1.0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ProjectionProfileSegmenter:
@@ -58,7 +58,7 @@ class ProjectionProfileSegmenter:
 
     def segment(
         self, image: np.ndarray, deskew_angle: float = 0.0
-    ) -> List[SegmentedLine]:
+    ) -> list[SegmentedLine]:
         """Detect text lines in an image.
 
         Args:
@@ -145,7 +145,7 @@ class ProjectionProfileSegmenter:
             lines.append(line)
 
         # Sort by reading order (top-to-bottom, left-to-right within same row)
-        lines.sort(key=lambda l: (l.y, l.x))
+        lines.sort(key=lambda item: (item.y, item.x))
         for idx, line in enumerate(lines):
             line.reading_order = idx
 
@@ -157,7 +157,7 @@ class ProjectionProfileSegmenter:
         )
         return lines
 
-    def _find_bands(self, h_proj: np.ndarray) -> List[Tuple[int, int]]:
+    def _find_bands(self, h_proj: np.ndarray) -> list[tuple[int, int]]:
         """Find text bands from horizontal projection.
 
         A band starts where projection exceeds threshold and ends at next gap.
@@ -170,7 +170,7 @@ class ProjectionProfileSegmenter:
         threshold = max(np.mean(h_proj), 0.1) * self.gap_ratio
 
         in_band = False
-        bands: List[Tuple[int, int]] = []
+        bands: list[tuple[int, int]] = []
         band_start = 0
 
         for i, val in enumerate(h_proj):
@@ -206,7 +206,7 @@ class KrakenSegmenter:
         except ImportError:
             logger.warning("kraken_not_available", hint="pip install kraken-ocr")
 
-    def segment(self, image: np.ndarray) -> List[SegmentedLine]:
+    def segment(self, image: np.ndarray) -> list[SegmentedLine]:
         """Segment using Kraken if available."""
         if not self.available:
             raise OCRException("Kraken is not installed. Use projection profile instead.")
@@ -217,14 +217,16 @@ class KrakenSegmenter:
 class LearnedSegmenter:
     """U-Net-based text line detector (optional, trained model)."""
 
-    def __init__(self, model_path: Optional[str] = None):
+    def __init__(self, model_path: str | None = None):
         self.model = None
         if model_path:
             try:
+                from pathlib import Path
+
                 import torch
 
-                if torch.path.exists(model_path):
-                    state = torch.load(model_path, map_location="cpu")
+                if Path(model_path).exists():
+                    self.model = torch.load(model_path, map_location="cpu")
                     logger.info("learned_segmenter_loaded", path=model_path)
             except Exception as e:
                 logger.warning("learned_segmenter_failed", error=str(e))
@@ -233,7 +235,7 @@ class LearnedSegmenter:
     def available(self) -> bool:
         return self.model is not None
 
-    def segment(self, image: np.ndarray) -> List[SegmentedLine]:
+    def segment(self, image: np.ndarray) -> list[SegmentedLine]:
         if not self.available:
             raise OCRException("Learned segmenter model not loaded.")
         # TODO: forward pass + threshold
@@ -251,7 +253,7 @@ class PipelineSegmenter:
         use_projection: bool = True,
         use_kraken: bool = False,
         use_learned: bool = False,
-        projection_params: Optional[Dict[str, Any]] = None,
+        projection_params: dict[str, Any] | None = None,
     ):
         params = projection_params or {}
         self.segmenter: Any = None
@@ -275,7 +277,7 @@ class PipelineSegmenter:
 
         logger.info("pipeline_segmenter_initialized", type=type(self.segmenter).__name__)
 
-    def segment(self, image: np.ndarray) -> List[SegmentedLine]:
+    def segment(self, image: np.ndarray) -> list[SegmentedLine]:
         """Run segmentation on an image."""
         try:
             return self.segmenter.segment(image)
@@ -285,7 +287,7 @@ class PipelineSegmenter:
             return fallback.segment(image)
 
 
-def compute_iou(box_a: Tuple[int, int, int, int], box_b: Tuple[int, int, int, int]) -> float:
+def compute_iou(box_a: tuple[int, int, int, int], box_b: tuple[int, int, int, int]) -> float:
     """Compute IoU between two boxes (x, y, w, h)."""
     ax1, ay1 = box_a[0], box_a[1]
     ax2, ay2 = box_a[0] + box_a[2], box_a[1] + box_a[3]
@@ -301,8 +303,8 @@ def compute_iou(box_a: Tuple[int, int, int, int], box_b: Tuple[int, int, int, in
 
 
 def match_segments(
-    predicted: List[SegmentedLine], ground_truth: List[Tuple[int, int, int, int]], iou_threshold: float = 0.5
-) -> Tuple[int, int, int]:
+    predicted: list[SegmentedLine], ground_truth: list[tuple[int, int, int, int]], iou_threshold: float = 0.5
+) -> tuple[int, int, int]:
     """Match predicted segments against ground truth boxes.
 
     Returns (TP, FP, FN) at the given IoU threshold.
@@ -334,10 +336,10 @@ def match_segments(
 
 
 def compute_prf1(
-    predicted: List[SegmentedLine],
-    ground_truth: List[Tuple[int, int, int, int]],
-    iou_thresholds: Optional[List[float]] = None,
-) -> Dict[str, Dict[str, float]]:
+    predicted: list[SegmentedLine],
+    ground_truth: list[tuple[int, int, int, int]],
+    iou_thresholds: list[float] | None = None,
+) -> dict[str, dict[str, float]]:
     """Compute precision/recall/F1 at multiple IoU thresholds.
 
     Returns {threshold: {'precision': p, 'recall': r, 'f1': f1}}

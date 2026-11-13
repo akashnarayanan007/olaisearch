@@ -1,54 +1,86 @@
 """Full API with all endpoints for M9."""
+import io
 import uuid
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+import cv2
 import numpy as np
-from fastapi import FastAPI, UploadFile, File, HTTPException, Query, Depends
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
 from pydantic import BaseModel
 
-from backend.core.logging import setup_logging, get_logger
+from backend.chat.chat import ManuscriptChat
 from backend.core.config import settings
+from backend.core.logging import get_logger
 from backend.core.models import (
-    Manuscript, Line, BoundingBox, SearchResult, OCRResult,
-    Citation, ChatResponse, OCRAlternative,
+    BoundingBox,
+    ChatResponse,
+    Line,
+    Manuscript,
+    OCRAlternative,
+    OCRResult,
+    SearchResult,
 )
-from backend.storage.database import Database
-from backend.pipeline.segmentation import ProjectionProfileSegmenter, PipelineSegmenter
-from backend.pipeline.recognition import RecognitionEnsemble, TesseractRecognizer
-from backend.pipeline.script_id import ScriptIdentifier
-from backend.pipeline.postcorrection import LexiconCorrector, Transliterator, Translator, EntityExtractor, DateNormalizer
-from backend.retrieval.hybrid import HybridRetriever
-from backend.chat.chat import ManuscriptChat, CitationVerifier
 from backend.ml.restoration.dataset import SyntheticDataset
+from backend.pipeline.postcorrection import (
+    DateNormalizer,
+    EntityExtractor,
+    Translator,
+    Transliterator,
+)
+from backend.pipeline.recognition import RecognitionEnsemble
+from backend.pipeline.segmentation import PipelineSegmenter, ProjectionProfileSegmenter
+from backend.retrieval.hybrid import HybridRetriever
+from backend.storage.database import Database
 
 logger = get_logger(__name__)
+
+
+# Globals
+db: Database | None = None
+retriever: HybridRetriever | None = None
+chat: ManuscriptChat | None = None
+ensemble: RecognitionEnsemble | None = None
+segmenter: PipelineSegmenter | None = None
+restorer: Any | None = None
+
+
+def init_app():
+    """Initialize application global state."""
+    global db, retriever, chat, ensemble, segmenter, restorer
+    if db is None:
+        db = Database()
+        db.connect()
+    if retriever is None:
+        retriever = HybridRetriever(db_path=settings.database_url.replace("sqlite:///", ""))
+        retriever.connect()
+    if segmenter is None:
+        segmenter = PipelineSegmenter(use_projection=True)
+    if ensemble is None:
+        ensemble = RecognitionEnsemble()
+    if chat is None:
+        chat = ManuscriptChat(retriever=retriever)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle manager."""
-    global db, retriever, chat, ensemble, segmenter, restorer
-
     logger.info("application_starting")
-    db = Database()
-    db.connect()
-    retriever = HybridRetriever(db_path=settings.database_url.replace("sqlite:///", ""))
-    retriever.connect()
-    segmenter = PipelineSegmenter(use_projection=True)
-    ensemble = RecognitionEnsemble()
-    chat = ManuscriptChat(retriever=retriever)
-    restorer = None  # Placeholder for restoration pipeline
+    init_app()
     logger.info("application_ready")
 
     yield
 
     logger.info("application_shutting_down")
+    global db, retriever
     if db:
         db.close()
+        db = None
     if retriever:
         retriever.close()
+        retriever = None
 
 
 app = FastAPI(
@@ -66,13 +98,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Globals
-db: Database
-retriever: HybridRetriever
-chat: ManuscriptChat
-ensemble: RecognitionEnsemble
-segmenter: PipelineSegmenter
-restorer = None
+# Initialize globals immediately for direct imports or test runners that bypass lifespan
+init_app()
 
 
 # ─── Request/Response Models ────────────────────────────────────────────────
@@ -86,9 +113,9 @@ class UploadRequest(BaseModel):
 class UploadResponse(BaseModel):
     manuscript_id: str
     num_lines: int
-    restored_image: Optional[str] = None
+    restored_image: str | None = None
     text: str
-    segments: List[Dict[str, Any]]
+    segments: list[dict[str, Any]]
     message: str
 
 
@@ -100,17 +127,17 @@ class SearchRequest(BaseModel):
 
 
 class SearchResponse(BaseModel):
-    results: List[SearchResult]
+    results: list[SearchResult]
     query: str
     num_results: int
     elapsed_ms: float
-    sources: List[str]
+    sources: list[str]
 
 
 class ChatRequest(BaseModel):
     question: str
-    manuscript_id: Optional[str] = None
-    line_id: Optional[str] = None
+    manuscript_id: str | None = None
+    line_id: str | None = None
     mode: str = "leaf"  # leaf, archive, selection
     explain_mode: str = "simple"  # simple, word-by-word, scholarly
 
@@ -123,7 +150,7 @@ class OCREnsembleRequest(BaseModel):
 
 class OCREnsembleResponse(BaseModel):
     manuscript_id: str
-    lines: List[OCRResult]
+    lines: list[OCRResult]
     total_confidence: float
     method: str
     elapsed_ms: float
@@ -164,14 +191,18 @@ async def root():
 
 
 @app.get("/health")
+@app.get("/api/v1/health")
 async def health():
     status = {"status": "healthy", "database": "connected"}
     try:
-        db.db.cursor().execute("SELECT 1")
+        if db and db.conn:
+            db.conn.cursor().execute("SELECT 1")
+        else:
+            status["database"] = "not_connected"
     except Exception as e:
         status["database"] = f"error: {str(e)}"
     status["tesseract"] = "available" if settings.omniroute_api_key != "your_api_key_here" else "api_configured"
-    status["hybrid_retriever"] = "initialized" if retriever.db else "not_connected"
+    status["hybrid_retriever"] = "initialized" if retriever and retriever.db else "not_connected"
     return status
 
 
@@ -181,7 +212,7 @@ async def health():
 async def upload_manuscript(
     file: UploadFile = File(...),
     language: str = Query(default="tam"),
-    script: Optional[str] = None,
+    script: str | None = None,
     apply_restoration: bool = Query(default=False),
     run_segmentation: bool = Query(default=True),
 ):
@@ -208,18 +239,18 @@ async def upload_manuscript(
                 restored_bytes = _image_to_bytes(restored_image)
 
         # Stage C: Segmentation
-        lines_info: List[Dict[str, Any]] = []
-        text_lines: List[str] = []
+        lines_info: list[dict[str, Any]] = []
+        text_lines: list[str] = []
         if run_segmentation:
             seg = ProjectionProfileSegmenter()
             detected_lines = seg.segment(restored_bytes if isinstance(restored_bytes, np.ndarray) else image)
             lines_info = [
                 {
-                    "x": l.x, "y": l.y, "width": l.width, "height": l.height,
-                    "reading_order": l.reading_order,
-                    "confidence": round(l.confidence, 3),
+                    "x": int(line_seg.x), "y": int(line_seg.y), "width": int(line_seg.width), "height": int(line_seg.height),
+                    "reading_order": int(line_seg.reading_order),
+                    "confidence": float(round(line_seg.confidence, 3)),
                 }
-                for l in detected_lines
+                for line_seg in detected_lines
             ]
             text_lines = [f"line_{i}" for i in range(len(detected_lines))]
         else:
@@ -228,7 +259,7 @@ async def upload_manuscript(
 
         # Stage D+E: Script ID + Recognition
         manuscript_id = str(uuid.uuid4())
-        ms_lines: List[Line] = []
+        ms_lines: list[Line] = []
         full_text = ""
 
         for idx, line_info in enumerate(lines_info):
@@ -271,7 +302,7 @@ async def upload_manuscript(
             restored_image=restored_image and "restored_image_available",
             text=full_text.strip(),
             segments=lines_info,
-            message="Manuscript processed successfully",
+            message="Manuscript uploaded and indexed successfully",
         )
 
     except Exception as e:
@@ -289,20 +320,20 @@ async def recognize_ensemble(request: OCREnsembleRequest):
             raise HTTPException(status_code=404, detail="Manuscript not found")
 
         # Run ensemble on each line
-        results: List[OCRResult] = []
+        results: list[OCRResult] = []
         total_conf = 0.0
         start = __import__("time").time()
 
         for line in manuscript.lines:
             # Extract line crop
-            crop = __extract_line_crop(np.array(__import__("PIL").Image.open(manuscript.image_path)), line.bbox)
+            crop = _extract_line_crop(np.array(Image.open(manuscript.image_path)), line.bbox)
             if crop is not None:
                 result = ensemble.recognize(crop)
                 results.append(OCRResult(
                     text=result.text,
                     confidence=result.confidence,
                     char_confidences=result.char_confidences,
-                    alternatives=[OCRAlternative(t, c) for t, c in result.alternatives[:3]],
+                    alternatives=[OCRAlternative(text=t, confidence=c) for t, c in result.alternatives[:3]],
                     recognizer=result.recognizer,
                     processing_time_ms=result.elapsed_ms,
                 ))
@@ -425,7 +456,7 @@ async def get_stats():
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
-def _quality_check(image: np.ndarray) -> Dict[str, Any]:
+def _quality_check(image: np.ndarray) -> dict[str, Any]:
     """Simple quality assessment."""
     h, w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
@@ -449,14 +480,13 @@ def _restore_image(image: np.ndarray):
 
 def _image_to_bytes(image: np.ndarray) -> bytes:
     """Convert numpy array to JPEG bytes."""
-    import cv2, io
     img = Image.fromarray(image if len(image.shape) == 3 else cv2.cvtColor(image, cv2.COLOR_GRAY2BGR))
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=95)
     return buf.getvalue()
 
 
-def _extract_line_crop(image: np.ndarray, bbox: BoundingBox) -> Optional[np.ndarray]:
+def _extract_line_crop(image: np.ndarray, bbox: BoundingBox) -> np.ndarray | None:
     """Extract a line crop from an image."""
     x, y, w, h = bbox.x, bbox.y, bbox.width, bbox.height
     h_img, w_img = image.shape[:2]
@@ -465,12 +495,6 @@ def _extract_line_crop(image: np.ndarray, bbox: BoundingBox) -> Optional[np.ndar
     if x2 <= x1 or y2 <= y1:
         return None
     return image[y1:y2, x1:x2]
-
-
-# Make imports available
-import numpy as np
-import cv2
-from PIL import Image
 
 
 if __name__ == "__main__":

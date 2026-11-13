@@ -1,18 +1,14 @@
 """Tests for the hybrid retrieval engine."""
 from __future__ import annotations
 
-import json
-import tempfile
 import pytest
 
 from backend.retrieval.hybrid import (
+    CharNGramIndexer,
     HybridRetriever,
     PhoneticNormalizer,
-    CharNGramIndexer,
-    DenseEmbedder,
     reciprocal_rank_fusion,
 )
-
 
 # ─── RRF ────────────────────────────────────────────────────────────────────────
 
@@ -106,7 +102,7 @@ def test_retriever_search_no_results(retriever):
 
 def test_retriever_index_and_search(retriever):
     """Index a synthetic manuscript and find it."""
-    from backend.core.models import Manuscript, Line, BoundingBox, OCRResult
+    from backend.core.models import BoundingBox, Line, Manuscript, OCRResult
 
     ms = Manuscript(
         id="ms_test_001",

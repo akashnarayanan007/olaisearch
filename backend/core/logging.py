@@ -1,6 +1,7 @@
 ﻿"""Structured logging setup."""
 import logging
 import sys
+
 import structlog
 
 from backend.core.config import settings

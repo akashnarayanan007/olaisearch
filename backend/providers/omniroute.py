@@ -1,16 +1,16 @@
 ﻿"""OmniRoute provider implementation with retry, caching, and tracking."""
-import time
+import base64
 import hashlib
 import json
-from typing import Any, Dict, List, Optional
-import base64
+import time
+from typing import Any
 
 from openai import AsyncOpenAI
-from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from backend.core.config import settings
-from backend.core.logging import get_logger
 from backend.core.exceptions import ProviderException
+from backend.core.logging import get_logger
 from backend.providers.base import Provider, ProviderConfig
 
 logger = get_logger(__name__)
@@ -19,7 +19,7 @@ logger = get_logger(__name__)
 class OmniRouteProvider(Provider):
     """OmniRoute provider with OpenAI-compatible client."""
 
-    def __init__(self, config: Optional[ProviderConfig] = None):
+    def __init__(self, config: ProviderConfig | None = None):
         """Initialize OmniRoute provider.
 
         Args:
@@ -57,10 +57,10 @@ class OmniRouteProvider(Provider):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
+        system: str | None = None,
         json_mode: bool = False,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate text from prompt with retry logic.
 
         Args:
@@ -126,7 +126,7 @@ class OmniRouteProvider(Provider):
             logger.error("omniroute_generate_error", model=model, error=str(e))
             raise ProviderException(f"Generation failed: {str(e)}") from e
 
-    async def embed(self, texts: List[str], model: str) -> List[List[float]]:
+    async def embed(self, texts: list[str], model: str) -> list[list[float]]:
         """Generate embeddings.
 
         Args:
@@ -171,7 +171,7 @@ class OmniRouteProvider(Provider):
     )
     async def recognize(
         self, image_bytes: bytes, prompt: str, model: str, **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Vision-language model recognition.
 
         Args:

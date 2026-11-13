@@ -1,7 +1,7 @@
 ﻿"""Provider abstraction layer base classes."""
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -22,10 +22,10 @@ class Provider(ABC):
         self,
         prompt: str,
         model: str,
-        system: Optional[str] = None,
+        system: str | None = None,
         json_mode: bool = False,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate text from prompt.
 
         Args:
@@ -41,7 +41,7 @@ class Provider(ABC):
         pass
 
     @abstractmethod
-    async def embed(self, texts: List[str], model: str) -> List[List[float]]:
+    async def embed(self, texts: list[str], model: str) -> list[list[float]]:
         """Generate embeddings.
 
         Args:
@@ -56,7 +56,7 @@ class Provider(ABC):
     @abstractmethod
     async def recognize(
         self, image_bytes: bytes, prompt: str, model: str, **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Vision-language model recognition.
 
         Args:

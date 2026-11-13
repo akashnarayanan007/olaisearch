@@ -9,10 +9,9 @@ Techniques applied:
 6. String hole detection and masking
 7. Binarization (Sauvola adaptive thresholding)
 """
-import numpy as np
+
 import cv2
-from typing import Tuple, Optional
-from skimage import morphology, exposure
+import numpy as np
 from skimage.filters import threshold_sauvola
 
 from backend.core.logging import get_logger
@@ -71,7 +70,7 @@ class ClassicalRestoration:
         logger.debug("clahe_applied", clip_limit=clip_limit, tile_size=tile_size)
         return enhanced
 
-    def deskew(self, image: np.ndarray) -> Tuple[np.ndarray, float]:
+    def deskew(self, image: np.ndarray) -> tuple[np.ndarray, float]:
         """Detect and correct skew angle.
 
         Args:
@@ -120,7 +119,7 @@ class ClassicalRestoration:
 
     def detect_borders(
         self, image: np.ndarray, margin_ratio: float = 0.05
-    ) -> Tuple[int, int, int, int]:
+    ) -> tuple[int, int, int, int]:
         """Detect manuscript borders (non-text margins).
 
         Args:
@@ -204,7 +203,7 @@ class ClassicalRestoration:
         apply_clahe: bool = True,
         apply_deskew: bool = True,
         apply_binarization: bool = False,
-    ) -> Tuple[np.ndarray, dict]:
+    ) -> tuple[np.ndarray, dict]:
         """Full classical restoration pipeline.
 
         Args:

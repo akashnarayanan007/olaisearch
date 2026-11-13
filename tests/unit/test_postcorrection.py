@@ -1,16 +1,12 @@
 """Tests for the post-correction pipeline."""
 from __future__ import annotations
 
-import json
-import pytest
-
 from backend.pipeline.postcorrection import (
-    LexiconCorrector,
-    Transliterator,
     DateNormalizer,
     DomainGlossary,
+    LexiconCorrector,
+    Transliterator,
 )
-
 
 # ─── LexiconCorrector ──────────────────────────────────────────────────────────
 

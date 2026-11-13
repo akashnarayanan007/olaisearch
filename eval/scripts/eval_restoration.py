@@ -9,17 +9,17 @@ Compares:
 Metrics: PSNR, SSIM on synthetic and real test sets.
 """
 import argparse
+import json
 from pathlib import Path
-import torch
+
 import cv2
 import numpy as np
-from typing import Dict, List, Tuple
-import json
+import torch
 from tqdm import tqdm
 
+from backend.core.logging import get_logger, setup_logging
 from backend.ml.restoration.model import UNet
 from backend.pipeline.restoration import ClassicalRestoration
-from backend.core.logging import setup_logging, get_logger
 
 setup_logging()
 logger = get_logger(__name__)
@@ -93,7 +93,7 @@ def evaluate_restoration(
     model_checkpoint: str = None,
     output_file: str = None,
     device: str = "cpu",
-) -> Dict[str, any]:
+) -> dict[str, any]:
     """Evaluate restoration methods on test set.
 
     Args:

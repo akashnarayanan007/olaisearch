@@ -103,9 +103,13 @@ export async function callChatStream(question, options = {}, onChunk) {
     })
     const reader = resp.data.getReader()
     const decoder = new TextDecoder()
-    while (true) {
+    let reading = true
+    while (reading) {
       const { done, value } = await reader.read()
-      if (done) break
+      if (done) {
+        reading = false
+        break
+      }
       const text = decoder.decode(value, { stream: true })
       onChunk(text)
     }

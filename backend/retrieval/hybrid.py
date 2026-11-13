@@ -12,16 +12,13 @@ Architecture:
 from __future__ import annotations
 
 import hashlib
-import json
 import re
+import sqlite3
 import time
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
-import sqlite3
 
-from backend.core.config import settings
 from backend.core.logging import get_logger
 from backend.core.models import BoundingBox, SearchResult
 
@@ -36,7 +33,7 @@ class PhoneticNormalizer:
     When user types Tamil in Roman (e.g., "kaṇṭa"), it matches the transliteration index.
     """
 
-    TAMIL_TO_ROMAN: Dict[str, str] = {
+    TAMIL_TO_ROMAN: dict[str, str] = {
         "க": "ka", "ங": "nga", "ச": "cha", "ஞ": "nya", "ட": "ḍa",
         "ண": "ṇa", "த": "ta", "ந": "na", "ப": "pa", "ம": "ma",
         "ய": "ya", "ர": "ra", "ல": "la", "வ": "va", "ழ": "zha",
@@ -45,12 +42,12 @@ class PhoneticNormalizer:
         "எ": "e", "ஏ": "ē", "ஐ": "ai", "ஒ": "o", "ஓ": "ō", "ஔ": "au",
     }
 
-    MALAYALAM_TO_ROMAN: Dict[str, str] = {
-        "ക": "ka", "ഘ": "gha", "ഗ": "ga", "ഘ": "gha", "ങ": "nga",
+    MALAYALAM_TO_ROMAN: dict[str, str] = {
+        "ക": "ka", "ഖ": "kha", "ഗ": "ga", "ഘ": "gha", "ങ": "nga",
         "ച": "cha", "ജ": "ja", "ഞ": "nya",
     }
 
-    DEVANAGARI_TO_ROMAN: Dict[str, str] = {
+    DEVANAGARI_TO_ROMAN: dict[str, str] = {
         "क": "ka", "ख": "kha", "ग": "ga", "घ": "gha", "ङ": "nga",
         "च": "ca", "छ": "cha", "ज": "ja", "झ": "jha", "ञ": "nya",
         "ट": "ṭa", "ठ": "ṭha", "ड": "ḍa", "ढ": "ḍha", "ण": "ṇa",
@@ -97,7 +94,7 @@ class CharNGramIndexer:
         self.min_n = min_n
         self.max_n = max_n
 
-    def extract(self, text: str) -> List[str]:
+    def extract(self, text: str) -> list[str]:
         """Extract character n-grams from text."""
         ngrams = set()
         text_clean = text.lower().strip()
@@ -107,7 +104,7 @@ class CharNGramIndexer:
                     ngrams.add(text_clean[i : i + n])
         return list(ngrams)
 
-    def extract_ngrams(self, text: str, n: Optional[Tuple[int, int]] = None) -> List[str]:
+    def extract_ngrams(self, text: str, n: tuple[int, int] | None = None) -> list[str]:
         """Extract character n-grams with explicit (min_n, max_n) range."""
         if n is None:
             n = (self.min_n, self.max_n)
@@ -120,7 +117,7 @@ class CharNGramIndexer:
                     ngrams.add(text_clean[i : i + length])
         return list(ngrams)
 
-    def search(self, query: str, terms: List[str], top_k: int = 5) -> List[Dict[str, Any]]:
+    def search(self, query: str, terms: list[str], top_k: int = 5) -> list[dict[str, Any]]:
         """Find the closest terms to *query* by overlapping character n-grams.
 
         Returns a list of ``{"term": str, "score": float}`` sorted by score descending.
@@ -128,7 +125,7 @@ class CharNGramIndexer:
         if not terms or not query:
             return []
         query_ngrams = set(self.extract(query))
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         for term in terms:
             term_ngrams = set(self.extract(term))
             if not query_ngrams or not term_ngrams:
@@ -163,14 +160,14 @@ class DenseEmbedder:
         except Exception as e:
             logger.warning("embedder_fallback_to_hashing", model=model_name, error=str(e))
 
-    def embed(self, texts: List[str]) -> np.ndarray:
+    def embed(self, texts: list[str]) -> np.ndarray:
         """Embed a list of texts into dense vectors."""
         if self.model is not None:
             return self.model.encode(texts, normalize_embeddings=True, show_progress_bar=False).astype(np.float32)
         # Fallback: simple hash-based vector (not semantic but enables structure)
         return self._hash_fallback(texts)
 
-    def _hash_fallback(self, texts: List[str]) -> np.ndarray:
+    def _hash_fallback(self, texts: list[str]) -> np.ndarray:
         """Fallback: hash each word to a pseudo-vector dimension."""
         dim = 128
         vectors = np.zeros((len(texts), dim), dtype=np.float32)
@@ -191,8 +188,8 @@ class DenseEmbedder:
 # ─── Reciprocal Rank Fusion ──────────────────────────────────────────────────
 
 def reciprocal_rank_fusion(
-    ranked_lists: List[Any], k: int = 60
-) -> List[Any]:
+    ranked_lists: list[Any], k: int = 60
+) -> list[Any]:
     """Fuse multiple ranked result lists using RRF.
 
     Accepts two formats:
@@ -211,7 +208,7 @@ def reciprocal_rank_fusion(
 
     is_dict_format = isinstance(first[0], dict)
 
-    scores: Dict[str, float] = {}
+    scores: dict[str, float] = {}
     for ranked in ranked_lists:
         for rank_idx, item in enumerate(ranked):
             if is_dict_format:
@@ -247,7 +244,7 @@ class QueryUnderstander:
             return "san"
         return "eng"
 
-    def expand_for_ocr_noise(self, query: str, noise_level: float = 0.1) -> List[str]:
+    def expand_for_ocr_noise(self, query: str, noise_level: float = 0.1) -> list[str]:
         """Generate variants of query to handle OCR noise."""
         variants = [query]
         # Add char n-gram version for fuzzy match
@@ -259,13 +256,16 @@ class QueryUnderstander:
             variants.append(roman)
         return variants
 
-    def rewrite_with_llm(self, query: str, provider=None) -> Optional[str]:
+    def rewrite_with_llm(self, query: str, provider=None) -> str | None:
         """Optional LLM query rewriting."""
         if provider is None:
             return None
         prompt = f"Rewrite this search query for a palm-leaf manuscript archive to get better results: {query}"
-        # TODO: call provider
-        return None
+        try:
+            res = provider.generate(prompt=prompt)
+            return res.get("text") if isinstance(res, dict) else str(res)
+        except Exception:
+            return None
 
 
 # ─── N-Best OCR Awareness ────────────────────────────────────────────────────
@@ -281,9 +281,9 @@ class NBesterIndexer:
         line_id: str,
         manuscript_id: str,
         text: str,
-        alternatives: List[Dict[str, float]],
-        bbox: Optional[BoundingBox] = None,
-    ) -> List[Dict[str, Any]]:
+        alternatives: list[dict[str, float]],
+        bbox: BoundingBox | None = None,
+    ) -> list[dict[str, Any]]:
         """Create FTS index entries for each n-best alternative.
 
         Args:
@@ -327,10 +327,10 @@ class HybridRetriever:
     def __init__(
         self,
         db_path: str = "olaisearch.db",
-        faiss_index_path: Optional[str] = None,
+        faiss_index_path: str | None = None,
     ):
         self.db_path = db_path
-        self.db: Optional[sqlite3.Connection] = None
+        self.db: sqlite3.Connection | None = None
         self.embedder = DenseEmbedder()
         self.ngram_indexer = CharNGramIndexer()
         self.phonetic_norm = PhoneticNormalizer()
@@ -452,7 +452,7 @@ class HybridRetriever:
             import faiss
             vector_dim = self.embedder.embed(["test"]).shape[-1]
             self.faiss_index = faiss.IndexFlatIP(vector_dim)
-            self._line_metadata: List[Dict[str, Any]] = []
+            self._line_metadata: list[dict[str, Any]] = []
         self.faiss_index.add(np.ascontiguousarray(vectors))
         for i, line in enumerate(manuscript.lines):
             self._line_metadata.append({
@@ -462,13 +462,13 @@ class HybridRetriever:
                 "bbox": line.bbox,
             })
 
-    def search(self, query: str, limit: int = 10, use_rerank: bool = False) -> List[SearchResult]:
+    def search(self, query: str, limit: int = 10, use_rerank: bool = False) -> list[SearchResult]:
         """Perform hybrid search across all indexes."""
         start = time.time()
         self.query_understander.detect_script(query)
         variants = self.query_understander.expand_for_ocr_noise(query)
 
-        ranked_lists: List[List[Tuple[str, float]]] = []
+        ranked_lists: list[list[tuple[str, float]]] = []
 
         # 1. BM25 words
         try:
@@ -518,7 +518,7 @@ class HybridRetriever:
         )
         return results
 
-    def _fts_search(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def _fts_search(self, query: str, limit: int = 50) -> list[dict[str, Any]]:
         """BM25 FTS5 search."""
         if self.db is None:
             return []
@@ -532,7 +532,7 @@ class HybridRetriever:
         """, (query, limit))
         return [dict(row) for row in cursor.fetchall()]
 
-    def _ngram_search(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def _ngram_search(self, query: str, limit: int = 50) -> list[dict[str, Any]]:
         """Char n-gram FTS search."""
         if self.db is None:
             return []
@@ -546,7 +546,7 @@ class HybridRetriever:
         """, (query, limit))
         return [dict(row) for row in cursor.fetchall()]
 
-    def _phonetic_search(self, query: str, limit: int = 50) -> List[Dict[str, Any]]:
+    def _phonetic_search(self, query: str, limit: int = 50) -> list[dict[str, Any]]:
         """Phonetic FTS search."""
         if self.db is None:
             return []
@@ -561,7 +561,7 @@ class HybridRetriever:
         """, (phonetic_q, limit))
         return [dict(row) for row in cursor.fetchall()]
 
-    def _dense_search(self, query: str, limit: int = 50) -> List[Tuple[str, float]]:
+    def _dense_search(self, query: str, limit: int = 50) -> list[tuple[str, float]]:
         """Dense FAISS search."""
         if self.faiss_index is None or self.faiss_index.ntotal == 0:
             return []
@@ -574,7 +574,7 @@ class HybridRetriever:
                 results.append((meta["line_id"], 1.0 - float(i) / self.faiss_index.ntotal))
         return results
 
-    def _fetch_results(self, line_ids: List[str]) -> List[SearchResult]:
+    def _fetch_results(self, line_ids: list[str]) -> list[SearchResult]:
         """Fetch full results for line IDs."""
         if self.db is None or not line_ids:
             return []

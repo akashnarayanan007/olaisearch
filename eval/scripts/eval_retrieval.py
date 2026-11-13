@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Any
 
-from backend.retrieval.hybrid import HybridRetriever, reciprocal_rank_fusion
 from backend.core.logging import get_logger
+from backend.retrieval.hybrid import HybridRetriever
 
 logger = get_logger(__name__)
 
@@ -14,7 +13,7 @@ logger = get_logger(__name__)
 def evaluate_retrieval(
     corpus_dir: str = "eval/corpus",
     output_dir: str = "eval/results",
-) -> Dict:
+) -> dict:
     """Evaluate retrieval using parphrase queries on a real text corpus.
 
     Metrics:
@@ -35,7 +34,6 @@ def evaluate_retrieval(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load corpus
-    docs = []
     query_file = corpus_dir / "queries.jsonl"
     corpus_files = list(corpus_dir.glob("*.jsonl"))
 

@@ -1,14 +1,11 @@
 """Tests for the recognition pipeline (CER/WER, grapheme awareness)."""
 from __future__ import annotations
 
-import pytest
-import numpy as np
-
 from backend.pipeline.recognition import (
-    split_graphemes,
+    Calibration,
     compute_cer,
     compute_wer,
-    Calibration,
+    split_graphemes,
 )
 
 # ─── Grapheme splitting ───────────────────────────────────────────────────────

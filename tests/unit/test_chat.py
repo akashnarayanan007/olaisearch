@@ -2,17 +2,15 @@
 from __future__ import annotations
 
 import json
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from backend.chat.chat import (
     CitationVerifier,
+    ConversationMemory,
+    ManuscriptChat,
     ProvenanceDetector,
     WorkIdentifier,
-    ManuscriptChat,
-    ConversationMemory,
 )
-
 
 # ─── CitationVerifier ────────────────────────────────────────────────────────
 

@@ -1,7 +1,6 @@
 """Tests for the script identification module."""
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
 try:
@@ -14,7 +13,6 @@ from backend.pipeline.script_id import (
     ScriptCNN,
     ScriptIdentifier,
 )
-
 
 # ─── registry ─────────────────────────────────────────────────────────────────
 

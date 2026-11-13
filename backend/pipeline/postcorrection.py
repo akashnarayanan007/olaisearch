@@ -3,15 +3,15 @@ entity extraction, date normalisation, and domain glossary."""
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from dataclasses import dataclass
+from typing import Any
 
 from backend.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 # Era offsets relative to CE (positive = era starts after CE 0, negative = before)
-_ERA_OFFSETS: Dict[str, int] = {
+_ERA_OFFSETS: dict[str, int] = {
     "saka": 78,       # Saka era started in 78 CE
     "kali": -3101,    # Kali Yuga started ~3102 BCE
     "tamil": 8,       # Tamil era ~ 8 CE
@@ -52,9 +52,9 @@ class LexiconCorrector:
     def correct(
         self,
         text: str,
-        lexicon: Optional[Set[str]] = None,
+        lexicon: set[str] | None = None,
         script: str = "tam",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Return corrected text and list of applied corrections.
 
         Args:
@@ -69,8 +69,8 @@ class LexiconCorrector:
             return {"text": text, "diffs": []}
 
         words = text.split()
-        diffs: List[Dict[str, str]] = []
-        corrected_words: List[str] = []
+        diffs: list[dict[str, str]] = []
+        corrected_words: list[str] = []
 
         for word in words:
             best_word = word
@@ -98,9 +98,9 @@ class ConstrainedLLMCorrector:
     def correct(
         self,
         text: str,
-        context: Optional[str] = None,
+        context: str | None = None,
         script: str = "tam",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         logger.info("constrained_llm_corrector_noop", text_len=len(text))
         return {"text": text, "corrected": False, "note": "LLM corrector not configured"}
 
@@ -108,7 +108,7 @@ class ConstrainedLLMCorrector:
 # ─── Transliterator ────────────────────────────────────────────────────────────
 
 # Minimal Tamil→ISO 15919 map (common consonants and vowels only)
-_TAMIL_ROMAN: Dict[str, str] = {
+_TAMIL_ROMAN: dict[str, str] = {
     "அ": "a", "இ": "i", "ஈ": "ii", "உ": "u",
     "ஊ": "uu", "ீ": "v", "ு": "vv",
     "ஐ": "e", "ஒ": "ai", "ஓ": "o", "ஔ": "au",
@@ -120,11 +120,11 @@ _TAMIL_ROMAN: Dict[str, str] = {
     "ஸ": "sh", "ஹ": "s", "஻": "h", "ி": "l",
     "ெ": "a", "ே": "i", "ை": "ii", "௉": "u",
     "ொ": "uu", "ோ": "O", "ௌ": "au", "௎": "",
-    "ு": "m",  # anusvara
+    "ஂ": "m",  # anusvara
 }
 
 # Malayalam→ISO 15919 (subset)
-_MALAYALAM_ROMAN: Dict[str, str] = {
+_MALAYALAM_ROMAN: dict[str, str] = {
     "අ": "a", "ඇ": "i", "ඈ": "ii", "ඉ": "u",
     "ඊ": "uu", "ඐ": "e", "ඒ": "ai", "ඓ": "o",
     "ඔ": "au", "ඕ": "k", "ඖ": "kh", "඙": "g",
@@ -182,7 +182,7 @@ class Translator:
         text: str,
         script: str = "tam",
         target: str = "en",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         logger.info("translator_noop", text_len=len(text), script=script)
         return {
             "original": text,
@@ -195,7 +195,7 @@ class Translator:
 # ─── Entity Extractor ──────────────────────────────────────────────────────────
 
 # Regex patterns for common manuscript entities
-_ENTITY_PATTERNS: Dict[str, List[re.Pattern]] = {
+_ENTITY_PATTERNS: dict[str, list[re.Pattern]] = {
     "person": [
         re.compile(r"(?:மகன்|மகள்|பிதா|மகன்|குமார்|கோமான்)\s+(\S+)"),
         re.compile(r"(\b[A-Z][a-z]+\b\s+(?:son of|daughter of)\s+([A-Za-z\s]+))"),
@@ -226,8 +226,8 @@ class ExtractedEntity:
 class EntityExtractor:
     """Extract named entities (persons, places, dates, titles) from OCR text."""
 
-    def extract(self, text: str, script: str = "tam") -> List[Dict[str, Any]]:
-        results: List[Dict[str, Any]] = []
+    def extract(self, text: str, script: str = "tam") -> list[dict[str, Any]]:
+        results: list[dict[str, Any]] = []
         for etype, patterns in _ENTITY_PATTERNS.items():
             for pattern in patterns:
                 for match in pattern.finditer(text):
@@ -253,7 +253,7 @@ class DateNormalizer:
     Unknown eras return ``{"found": False, "ce_year": None}``.
     """
 
-    def normalize(self, text: str, era: str = "tamil") -> Dict[str, Any]:
+    def normalize(self, text: str, era: str = "tamil") -> dict[str, Any]:
         match = _DATE_RE.search(text)
         if not match:
             return {"found": False, "ce_year": None, "raw": text, "era": era}
@@ -289,14 +289,14 @@ class DomainGlossary:
     """In-memory domain glossary for manuscript terms."""
 
     def __init__(self) -> None:
-        self._entries: Dict[str, List[GlossaryEntry]] = {}
+        self._entries: dict[str, list[GlossaryEntry]] = {}
 
     def add(self, term: str, domain: str, description: str = "") -> None:
         entry = GlossaryEntry(term=term, domain=domain, description=description)
         self._entries.setdefault(term, []).append(entry)
         logger.debug("glossary_entry_added", term=term, domain=domain)
 
-    def lookup(self, term: str) -> List[Dict[str, Any]]:
+    def lookup(self, term: str) -> list[dict[str, Any]]:
         entries = self._entries.get(term, [])
         return [
             {"term": e.term, "domain": e.domain, "description": e.description,
@@ -310,7 +310,7 @@ class DomainGlossary:
 
 # ─── ENTITY_SCHEMA (for external consumers) ───────────────────────────────────
 
-ENTITY_SCHEMA: Dict[str, Any] = {
+ENTITY_SCHEMA: dict[str, Any] = {
     "types": ["person", "place", "date", "title"],
     "fields": ["type", "value", "confidence", "span"],
 }

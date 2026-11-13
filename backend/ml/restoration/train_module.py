@@ -1,13 +1,13 @@
 ﻿"""PyTorch Lightning module for U-Net restoration training."""
+from typing import Any
+
+import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import pytorch_lightning as pl
 from torchmetrics.image import PeakSignalNoiseRatio, StructuralSimilarityIndexMeasure
-from typing import Tuple, Dict, Any
 
-from backend.ml.restoration.model import UNet
 from backend.core.logging import get_logger
+from backend.ml.restoration.model import UNet
 
 logger = get_logger(__name__)
 
@@ -68,9 +68,9 @@ class RestorationModule(pl.LightningModule):
 
     def _compute_loss_and_metrics(
         self,
-        batch: Tuple[torch.Tensor, torch.Tensor],
+        batch: tuple[torch.Tensor, torch.Tensor],
         stage: str,
-    ) -> Dict[str, torch.Tensor]:
+    ) -> dict[str, torch.Tensor]:
         """Compute loss and metrics for a batch.
 
         Args:
@@ -102,7 +102,7 @@ class RestorationModule(pl.LightningModule):
             "ssim": ssim,
         }
 
-    def training_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> torch.Tensor:
         """Training step.
 
         Args:
@@ -119,7 +119,7 @@ class RestorationModule(pl.LightningModule):
 
         return metrics["loss"]
 
-    def validation_step(self, batch: Tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
+    def validation_step(self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int) -> None:
         """Validation step.
 
         Args:
@@ -137,7 +137,7 @@ class RestorationModule(pl.LightningModule):
         if batch_idx == 0:
             self._log_images(batch)
 
-    def _log_images(self, batch: Tuple[torch.Tensor, torch.Tensor], num_images: int = 4) -> None:
+    def _log_images(self, batch: tuple[torch.Tensor, torch.Tensor], num_images: int = 4) -> None:
         """Log sample images to TensorBoard/MLflow.
 
         Args:
@@ -176,7 +176,7 @@ class RestorationModule(pl.LightningModule):
                 self.current_epoch,
             )
 
-    def configure_optimizers(self) -> Dict[str, Any]:
+    def configure_optimizers(self) -> dict[str, Any]:
         """Configure optimizers and schedulers.
 
         Returns:

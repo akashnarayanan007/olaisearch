@@ -1,11 +1,9 @@
 ﻿"""SQLite database with FTS5 full-text search for the vertical slice."""
 import sqlite3
-from typing import List, Optional, Dict, Any
-from pathlib import Path
 
-from backend.core.logging import get_logger
-from backend.core.models import Manuscript, SearchResult, BoundingBox
 from backend.core.exceptions import IndexingException, SearchException
+from backend.core.logging import get_logger
+from backend.core.models import BoundingBox, Manuscript, SearchResult
 
 logger = get_logger(__name__)
 
@@ -20,7 +18,7 @@ class Database:
             db_path: Path to SQLite database file
         """
         self.db_path = db_path
-        self.conn: Optional[sqlite3.Connection] = None
+        self.conn: sqlite3.Connection | None = None
         logger.info("database_initialized", db_path=db_path)
 
     def connect(self) -> None:
@@ -148,7 +146,7 @@ class Database:
             logger.error("indexing_error", manuscript_id=manuscript.id, error=str(e))
             raise IndexingException(f"Failed to index manuscript: {str(e)}") from e
 
-    def search(self, query: str, limit: int = 10) -> List[SearchResult]:
+    def search(self, query: str, limit: int = 10) -> list[SearchResult]:
         """Search for text using BM25 via FTS5.
 
         Args:

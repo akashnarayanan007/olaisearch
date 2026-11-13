@@ -1,29 +1,29 @@
 """OCR pipeline modules."""
+from backend.pipeline.postcorrection import (
+    DateNormalizer,
+    DomainGlossary,
+    EntityExtractor,
+    LexiconCorrector,
+    Translator,
+    Transliterator,
+)
+from backend.pipeline.recognition import (
+    Calibration,
+    CRNNRecognizer,
+    RecognitionEnsemble,
+    TesseractRecognizer,
+    VLMRecognizer,
+    compute_cer,
+    compute_wer,
+    split_graphemes,
+)
+from backend.pipeline.script_id import SCRIPT_REGISTRY, ScriptIdentifier
 from backend.pipeline.segmentation import (
-    ProjectionProfileSegmenter,
     PipelineSegmenter,
+    ProjectionProfileSegmenter,
     SegmentedLine,
     compute_iou,
     compute_prf1,
-)
-from backend.pipeline.script_id import ScriptIdentifier, SCRIPT_REGISTRY
-from backend.pipeline.recognition import (
-    RecognitionEnsemble,
-    Calibration,
-    TesseractRecognizer,
-    VLMRecognizer,
-    CRNNRecognizer,
-    split_graphemes,
-    compute_cer,
-    compute_wer,
-)
-from backend.pipeline.postcorrection import (
-    LexiconCorrector,
-    Transliterator,
-    Translator,
-    EntityExtractor,
-    DateNormalizer,
-    DomainGlossary,
 )
 
 __all__ = [

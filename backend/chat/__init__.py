@@ -1,10 +1,10 @@
 """ManuscriptChat Q&A module."""
 from backend.chat.chat import (
-    ManuscriptChat,
     CitationVerifier,
+    ConversationMemory,
+    ManuscriptChat,
     ProvenanceDetector,
     WorkIdentifier,
-    ConversationMemory,
 )
 
 __all__ = [

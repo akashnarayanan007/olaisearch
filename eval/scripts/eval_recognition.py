@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List
 
 import cv2
-import numpy as np
 
-from backend.pipeline.recognition import RecognitionEnsemble, TesseractRecognizer, compute_cer, compute_wer
-from backend.pipeline.segmentation import ProjectionProfileSegmenter
 from backend.core.logging import get_logger
+from backend.pipeline.recognition import (
+    TesseractRecognizer,
+    compute_cer,
+    compute_wer,
+)
+from backend.pipeline.segmentation import ProjectionProfileSegmenter
 
 logger = get_logger(__name__)
 
@@ -18,8 +20,8 @@ logger = get_logger(__name__)
 def evaluate_recognition(
     test_dir: str = "data/synthetic",
     output_dir: str = "eval/results",
-    scripts: List[str] = None,
-) -> Dict:
+    scripts: list[str] = None,
+) -> dict:
     """Evaluate recognition on synthetic test data.
 
     Metrics:
@@ -34,7 +36,7 @@ def evaluate_recognition(
     output_dir.mkdir(parents=True, exist_ok=True)
     scripts = scripts or ["tam", "san", "mal"]
 
-    results: Dict[str, any] = {
+    results: dict[str, any] = {
         "by_script": {},
         "by_damage_level": {},
         "by_recognizer": {},
@@ -52,8 +54,8 @@ def evaluate_recognition(
     wer_sum = {s: 0.0 for s in scripts}
     cer_count = {s: 0 for s in scripts}
     wer_count = {s: 0 for s in scripts}
-    damage_results: Dict[str, List[float]] = {}
-    recognizer_cers: Dict[str, List[float]] = {}
+    damage_results: dict[str, list[float]] = {}
+    recognizer_cers: dict[str, list[float]] = {}
 
     for sample_dir in sample_dirs:
         labels_path = sample_dir / "labels.json"

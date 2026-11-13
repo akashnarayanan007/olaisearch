@@ -15,11 +15,10 @@ import json
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from backend.core.exceptions import OCRException
 from backend.core.logging import get_logger
-from backend.core.models import BoundingBox, Citation, ChatResponse
+from backend.core.models import ChatResponse, Citation
 
 logger = get_logger(__name__)
 
@@ -32,7 +31,7 @@ class CitationVerifier:
     Strips or flags unsupported sentences. Returns clean response with verified citations.
     """
 
-    def parse_citation(self, citation_str: str) -> Optional[Dict[str, Any]]:
+    def parse_citation(self, citation_str: str) -> dict[str, Any] | None:
         """Parse a JSON citation string.
 
         Args:
@@ -53,7 +52,7 @@ class CitationVerifier:
         """Strip unverifiable citation blocks from *response_text*."""
         citation_pattern = re.compile(r"\{([^}]+)\}")
         citations = citation_pattern.findall(response_text)
-        flagged: List[str] = []
+        flagged: list[str] = []
         for cite_str in citations:
             parsed = self.parse_citation(cite_str)
             if not isinstance(parsed, dict) or "error" in parsed:
@@ -67,8 +66,8 @@ class CitationVerifier:
     def verify(
         self,
         response_text: str,
-        evidence_tiers: Dict[str, List[Dict[str, str]]],
-    ) -> Dict[str, Any]:
+        evidence_tiers: dict[str, list[dict[str, str]]],
+    ) -> dict[str, Any]:
         """Verify all citations in response text.
 
         Args:
@@ -80,7 +79,7 @@ class CitationVerifier:
         """
         issues = []
         flagged = []
-        verified_citations: List[Dict[str, str]] = []
+        verified_citations: list[dict[str, str]] = []
 
         # Extract citation patterns like {manuscript_id, line_id, ...}
         citation_pattern = re.compile(r"\{([^}]+)\}")
@@ -143,9 +142,9 @@ class ProvenanceDetector:
         r"(?i)(end|finish|complete|completed|all\s+done|അന്ത്യം|അവസാനം|സമാപനം|समाप्त|ಸಮಾಪ್ತಿ)",
     ]
 
-    def detect(self, text: str, script: str = "tam") -> Dict[str, Any]:
+    def detect(self, text: str, script: str = "tam") -> dict[str, Any]:
         """Detect provenance signals in text."""
-        provenance: Dict[str, Any] = {"signal_type": "heuristic", "confidence": 0.0}
+        provenance: dict[str, Any] = {"signal_type": "heuristic", "confidence": 0.0}
         findings = []
 
         for pattern in self.COLIPHON_PATTERNS:
@@ -182,13 +181,13 @@ class WorkIdentifier:
 
     def __init__(
         self,
-        known_works: Optional[List[Dict[str, Any]]] = None,
+        known_works: list[dict[str, Any]] | None = None,
         embedder=None,
     ):
         self.known_works = known_works or []
         self.embedder = embedder
 
-    def add_known_work(self, work_id: str, sample_text: List[str]) -> None:
+    def add_known_work(self, work_id: str, sample_text: list[str]) -> None:
         """Register a known work for similarity matching."""
         self.known_works.append({
             "id": work_id,
@@ -196,7 +195,7 @@ class WorkIdentifier:
             "sample_text": " ".join(sample_text),
         })
 
-    def identify(self, text: str) -> Dict[str, Any]:
+    def identify(self, text: str) -> dict[str, Any]:
         """Check if text matches any known work."""
         if not self.known_works:
             return {"matches": [], "method": "no_known_works"}
@@ -231,7 +230,7 @@ class WorkIdentifier:
 @dataclass
 class ConversationMemory:
     """Multi-turn conversation memory with summarization."""
-    messages: List[Dict[str, str]] = field(default_factory=list)
+    messages: list[dict[str, str]] = field(default_factory=list)
     summary: str = ""
     max_turns: int = 20
 
@@ -246,10 +245,10 @@ class ConversationMemory:
             recent = self.messages[-self.max_turns:]
             self.messages = [{"role": "system", "content": self.summary}] + recent
 
-    def get_messages(self) -> List[Dict[str, str]]:
+    def get_messages(self) -> list[dict[str, str]]:
         return self.messages
 
-    def get_context(self) -> List[Dict[str, str]]:
+    def get_context(self) -> list[dict[str, str]]:
         return self.get_messages()
 
     def clear(self) -> None:
@@ -288,9 +287,9 @@ RULES:
         self,
         retriever=None,
         provider=None,
-        citation_verifier: Optional[CitationVerifier] = None,
-        provenance_detector: Optional[ProvenanceDetector] = None,
-        work_identifier: Optional[WorkIdentifier] = None,
+        citation_verifier: CitationVerifier | None = None,
+        provenance_detector: ProvenanceDetector | None = None,
+        work_identifier: WorkIdentifier | None = None,
     ):
         self.retriever = retriever
         self.provider = provider
@@ -302,10 +301,10 @@ RULES:
     def ask(
         self,
         question: str,
-        manuscript_id: Optional[str] = None,
-        line_id: Optional[str] = None,
+        manuscript_id: str | None = None,
+        line_id: str | None = None,
         mode: str = "leaf",
-        memory: Optional[ConversationMemory] = None,
+        memory: ConversationMemory | None = None,
         explain_mode: str = "simple",
     ) -> ChatResponse:
         """Process a question and return a ChatResponse with evidence tiers."""
@@ -313,7 +312,7 @@ RULES:
         logger.info("chat_ask", question=question[:100], mode=mode, manuscript=manuscript_id)
 
         # Gather evidence based on mode
-        evidence: Dict[str, List[Dict[str, str]]] = {
+        evidence: dict[str, list[dict[str, str]]] = {
             "manuscript": [],
             "archive": [],
             "background": [],
@@ -356,6 +355,7 @@ RULES:
         clean_text = verification["clean_text"]
 
         elapsed_ms = (time.time() - start) * 1000
+        logger.info("chat_completed", elapsed_ms=round(elapsed_ms, 1))
 
         # Build response
         return ChatResponse(
@@ -371,20 +371,20 @@ RULES:
         )
 
     def _get_manuscript_evidence(
-        self, manuscript_id: str, line_id: Optional[str] = None
-    ) -> List[Dict[str, str]]:
+        self, manuscript_id: str, line_id: str | None = None
+    ) -> list[dict[str, str]]:
         """Get manuscript lines (with OCR alternatives) for leaf/selection mode."""
         # TODO: fetch from database
         return [{"text": "", "manuscript_id": manuscript_id, "line_id": line_id or ""}]
 
-    def _search_archive(self, query: str, limit: int = 10) -> List[Dict[str, str]]:
+    def _search_archive(self, query: str, limit: int = 10) -> list[dict[str, str]]:
         """Search archive for relevant passages."""
         if self.retriever is None:
             return []
         results = self.retriever.search(query, limit=limit)
         return [{"text": r.text, "manuscript_id": r.manuscript_id, "line_id": r.line_id} for r in results]
 
-    def _build_context(self, evidence: Dict[str, List], explain_mode: str) -> str:
+    def _build_context(self, evidence: dict[str, list], explain_mode: str) -> str:
         """Build context string from evidence tiers."""
         parts = []
         if evidence.get("manuscript"):
@@ -397,7 +397,7 @@ RULES:
                 parts.append(f"{doc.get('text', '')} {{manuscript_id: {doc.get('manuscript_id')}}}")
         return "\n".join(parts) if parts else "No evidence retrieved."
 
-    def _generate_fallback(self, question: str, evidence: Dict, explain_mode: str) -> str:
+    def _generate_fallback(self, question: str, evidence: dict, explain_mode: str) -> str:
         """Generate a response without LLM (for environments without API key)."""
         response_parts = []
         if evidence.get("manuscript"):
@@ -410,7 +410,7 @@ RULES:
 
         return "\n\n".join(response_parts)
 
-    def _extract_citations(self, text: str) -> List[Citation]:
+    def _extract_citations(self, text: str) -> list[Citation]:
         """Extract structured citations from generated text."""
         citations = []
         pattern = re.compile(r"\{(manuscript_id:[^}]+)\}")
@@ -432,7 +432,7 @@ RULES:
                 pass
         return citations
 
-    def _suggest_followups(self, question: str, evidence: Dict) -> List[str]:
+    def _suggest_followups(self, question: str, evidence: dict) -> list[str]:
         """Generate follow-up questions."""
         suggestions = []
         if evidence.get("manuscript"):

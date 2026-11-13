@@ -1,0 +1,23 @@
+{
+  "by_script": {
+    "tam": {
+      "CER": "not_measured",
+      "WER": "not_measured",
+      "num_samples": 0
+    },
+    "san": {
+      "CER": "not_measured",
+      "WER": "not_measured",
+      "num_samples": 0
+    },
+    "mal": {
+      "CER": "not_measured",
+      "WER": "not_measured",
+      "num_samples": 0
+    }
+  },
+  "by_damage_level": {},
+  "by_recognizer": {},
+  "single_vs_ensemble": {},
+  "sample_count": 0
+}

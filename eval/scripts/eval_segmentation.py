@@ -3,13 +3,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List
 
 import cv2
-import numpy as np
 
-from backend.pipeline.segmentation import ProjectionProfileSegmenter, compute_prf1
 from backend.core.logging import get_logger
+from backend.pipeline.segmentation import ProjectionProfileSegmenter, compute_prf1
 
 logger = get_logger(__name__)
 
@@ -17,14 +15,13 @@ logger = get_logger(__name__)
 def evaluate_segmentation(
     test_dir: str = "eval/test_data/segmentation",
     output_dir: str = "eval/results",
-) -> Dict:
+) -> dict:
     """Evaluate segmentation on synthetic test data."""
     test_dir = Path(test_dir)
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     results = {}
-    all_prf1 = {"0.5": {"precision": 0.0, "recall": 0.0, "f1": 0.0}}
     total_tp = total_fp = total_fn = 0
 
     sample_dirs = sorted(test_dir.glob("sample_*"))
@@ -58,7 +55,6 @@ def evaluate_segmentation(
         # Run segmenter
         seg = ProjectionProfileSegmenter()
         predicted = seg.segment(image)
-        predicted_boxes = [(l.x, l.y, l.width, l.height) for l in predicted]
 
         # Compute metrics
         prf1 = compute_prf1(predicted, gt_bboxes, iou_thresholds=[0.5, 0.7, 0.9])
@@ -98,7 +94,7 @@ def evaluate_segmentation(
     return results
 
 
-def _aggregate(prf1_dict: Dict) -> tuple:
+def _aggregate(prf1_dict: dict) -> tuple:
     """Aggregate TP/FP/FN from prf1 dict."""
     precision = prf1_dict.get("precision", 0)
     recall = prf1_dict.get("recall", 0)

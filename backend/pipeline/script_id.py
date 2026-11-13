@@ -6,20 +6,20 @@ with VLM fallback for unknown scripts.
 from __future__ import annotations
 
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
+import cv2
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from backend.core.config import settings
 from backend.core.logging import get_logger
 
 logger = get_logger(__name__)
 
 # Script registry: code -> tesseract language string
-SCRIPT_REGISTRY: Dict[str, str] = {
+SCRIPT_REGISTRY: dict[str, str] = {
     "tam": "tam",
     "mal": "mal",
     "san": "san",
@@ -73,11 +73,11 @@ class ScriptIdentifier:
 
     def __init__(
         self,
-        model_path: Optional[str] = None,
+        model_path: str | None = None,
         use_vlm_fallback: bool = True,
     ):
         self.model = None
-        self.label_to_code: List[str] = list(SCRIPT_REGISTRY.keys())
+        self.label_to_code: list[str] = list(SCRIPT_REGISTRY.keys())
         self.code_to_label = {v: k for k, v in SCRIPT_REGISTRY.items()}
 
         if model_path:
@@ -95,7 +95,7 @@ class ScriptIdentifier:
 
         self.use_vlm_fallback = use_vlm_fallback
 
-    def identify_text(self, text: str) -> Dict[str, Any]:
+    def identify_text(self, text: str) -> dict[str, Any]:
         """Identify script from Unicode text using character-range heuristics.
 
         Returns:
@@ -141,7 +141,7 @@ class ScriptIdentifier:
         return torch.tensor(resized).unsqueeze(0)
 
     @torch.no_grad()
-    def identify(self, image: np.ndarray) -> Dict[str, Any]:
+    def identify(self, image: np.ndarray) -> dict[str, Any]:
         """Identify script of a line image.
 
         Returns:
@@ -186,7 +186,7 @@ class ScriptIdentifier:
                 "elapsed_ms": round((time.time() - start) * 1000, 1),
             }
 
-    def _unicode_fallback(self, image: np.ndarray) -> Tuple[str, float]:
+    def _unicode_fallback(self, image: np.ndarray) -> tuple[str, float]:
         """Fall back to Unicode range analysis of the image content.
         Since we only have the image (not OCR text), we classify by visual features.
         Default to Tamil as the primary target.

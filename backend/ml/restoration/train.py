@@ -10,14 +10,15 @@ Usage:
 """
 import argparse
 from pathlib import Path
-import torch
-import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, LearningRateMonitor
-from pytorch_lightning.loggers import TensorBoardLogger, MLFlowLogger
 
-from backend.ml.restoration.train_module import RestorationModule
+import pytorch_lightning as pl
+import torch
+from pytorch_lightning.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+from pytorch_lightning.loggers import TensorBoardLogger
+
+from backend.core.logging import get_logger, setup_logging
 from backend.ml.restoration.dataset import get_dataloaders
-from backend.core.logging import setup_logging, get_logger
+from backend.ml.restoration.train_module import RestorationModule
 
 setup_logging()
 logger = get_logger(__name__)
@@ -145,7 +146,7 @@ def train(
         best_val_loss=checkpoint_callback.best_model_score,
     )
 
-    print(f"\n✅ Training complete!")
+    print("\n✅ Training complete!")
     print(f"   Best model saved to: {best_model_path}")
     print(f"   Best validation PSNR: {checkpoint_callback.best_model_score:.2f} dB")
     print(f"   TensorBoard logs: {tb_logger.log_dir}")

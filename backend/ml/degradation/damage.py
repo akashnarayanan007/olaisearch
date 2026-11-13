@@ -11,10 +11,10 @@ Physically-motivated damage that occurs on real palm-leaf manuscripts:
 - Uneven lighting
 - Camera blur and noise
 """
-import numpy as np
+
 import cv2
-from scipy.ndimage import gaussian_filter, binary_dilation
-from typing import Tuple, List
+import numpy as np
+from scipy.ndimage import binary_dilation, gaussian_filter
 
 
 def apply_water_stains(
@@ -139,11 +139,11 @@ def apply_ink_bleed(
 
 def apply_holes(
     image: np.ndarray,
-    bboxes: List[Tuple[int, int, int, int]],
+    bboxes: list[tuple[int, int, int, int]],
     rng: np.random.Generator,
     num_holes: int = 5,
     hole_type: str = "mixed",
-) -> Tuple[np.ndarray, List[Tuple[int, int, int, int]]]:
+) -> tuple[np.ndarray, list[tuple[int, int, int, int]]]:
     """Apply insect holes and string holes.
 
     Args:

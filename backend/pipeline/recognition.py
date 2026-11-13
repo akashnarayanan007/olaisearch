@@ -9,22 +9,19 @@ Output: text + per-grapheme confidence + alternatives.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import grapheme
 import numpy as np
 import pytesseract
-import torch
 from PIL import Image
 
 from backend.core.config import settings
 from backend.core.exceptions import OCRException
 from backend.core.logging import get_logger
-from backend.pipeline.script_id import SCRIPT_REGISTRY, ScriptIdentifier
 
 logger = get_logger(__name__)
 
@@ -35,8 +32,8 @@ class OCRWord:
 
     text: str
     confidence: float
-    bbox: Optional[tuple] = None
-    alternatives: List[str] = field(default_factory=list)
+    bbox: tuple | None = None
+    alternatives: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -45,14 +42,14 @@ class OCRLine:
 
     text: str
     confidence: float
-    char_confidences: List[float] = field(default_factory=list)
-    word_objects: List[OCRWord] = field(default_factory=list)
-    alternatives: List[str] = field(default_factory=list)
+    char_confidences: list[float] = field(default_factory=list)
+    word_objects: list[OCRWord] = field(default_factory=list)
+    alternatives: list[str] = field(default_factory=list)
     recognizer: str = ""
     elapsed_ms: float = 0.0
 
 
-def split_graphemes(text: str) -> List[str]:
+def split_graphemes(text: str) -> list[str]:
     """Split text into Unicode grapheme clusters."""
     if not text:
         return []
@@ -72,7 +69,7 @@ def compute_cer(w_hyp: str, w_ref: str) -> float:
     return dist / len(ref_graphemes)
 
 
-def levenshtein(s1: List[str], s2: List[str]) -> int:
+def levenshtein(s1: list[str], s2: list[str]) -> int:
     """Levenshtein distance between two sequences."""
     m, n = len(s1), len(s2)
     dp = [[0] * (n + 1) for _ in range(m + 1)]
@@ -89,7 +86,7 @@ def levenshtein(s1: List[str], s2: List[str]) -> int:
     return dp[m][n]
 
 
-def compute_wer(words_hyp: List[str], words_ref: List[str]) -> float:
+def compute_wer(words_hyp: list[str], words_ref: list[str]) -> float:
     """Compute word error rate."""
     if not words_ref:
         return 0.0 if not words_hyp else 1.0
@@ -100,7 +97,7 @@ def compute_wer(words_hyp: List[str], words_ref: List[str]) -> float:
 class TesseractRecognizer:
     """Tesseract OCR with Indic language support."""
 
-    def __init__(self, languages: Optional[List[str]] = None):
+    def __init__(self, languages: list[str] | None = None):
         self.languages = languages or ["tam", "mal", "san", "eng"]
         self.lang_string = "+".join(self.languages)
         logger.info("tesseract_recognizer_init", languages=self.languages)
@@ -165,7 +162,7 @@ class VLMRecognizer:
         except ImportError:
             logger.info("vlm_recognizer_unavailable", reason="openai_sdk_missing")
 
-    def recognize(self, image: np.ndarray) -> Optional[OCRLine]:
+    def recognize(self, image: np.ndarray) -> OCRLine | None:
         """Run VLM recognition."""
         if not self.available or self._provider is None:
             return None
@@ -193,7 +190,7 @@ class VLMRecognizer:
 class CRNNRecognizer:
     """CRNN + CTC recognizer (stub for future training)."""
 
-    def __init__(self, model_path: Optional[str] = None):
+    def __init__(self, model_path: str | None = None):
         self.model = None
         self.char_map = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
         self.available = model_path is not None
@@ -210,7 +207,7 @@ class CRNNRecognizer:
                 logger.warning("crnn_model_failed", error=str(e))
                 self.available = False
 
-    def recognize(self, image: np.ndarray) -> Optional[OCRLine]:
+    def recognize(self, image: np.ndarray) -> OCRLine | None:
         """Run CRNN recognition."""
         if not self.available or self.model is None:
             return None
@@ -226,7 +223,7 @@ class Calibration:
     """
 
     def __init__(self):
-        self.calibration_data: List[Dict[str, Any]] = []
+        self.calibration_data: list[dict[str, Any]] = []
         self.temperature: float = 1.0
 
     def update(self, predicted_conf: Any, correct: Any = None, recognizer: str = "ensemble"):
@@ -255,7 +252,7 @@ class Calibration:
             "timestamp": time.time(),
         })
 
-    def update_batch(self, data: List[Dict[str, Any]]) -> int:
+    def update_batch(self, data: list[dict[str, Any]]) -> int:
         """Update from a list of ``{'conf': ..., 'correct': ...}`` records.
 
         Returns the number of records added.
@@ -313,7 +310,7 @@ class Calibration:
             "temperature": self.temperature,
         })
 
-    def evaluate(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def evaluate(self, data: list[dict[str, Any]]) -> dict[str, Any]:
         """Evaluate calibration quality on a list of records.
 
         Args:
@@ -328,7 +325,7 @@ class Calibration:
         n = len(data)
         bins = min(15, n)
         # Bin by confidence (0–1 divided into bins)
-        bin_data: Dict[int, List[Dict[str, Any]]] = {}
+        bin_data: dict[int, list[dict[str, Any]]] = {}
         for record in data:
             conf = float(record.get("conf", 0.0))
             correct = bool(record.get("correct", False))
@@ -349,7 +346,7 @@ class Calibration:
         accuracy = total_correct / n if n else 0.0
         return {"ece": round(ece, 4), "num_samples": n, "accuracy": round(accuracy, 4)}
 
-    def blend(self, raw_conf: float) -> Dict[str, Any]:
+    def blend(self, raw_conf: float) -> dict[str, Any]:
         """Blend a raw confidence with recent calibration data.
 
         Returns:
@@ -359,7 +356,6 @@ class Calibration:
             return {"blended": raw_conf, "raw": raw_conf, "calibrated": raw_conf, "num_samples": 0}
 
         recent = self.calibration_data[-100:]
-        avg_conf = sum(d["predicted_conf"] for d in recent) / len(recent)
         acc = sum(1 for d in recent if d["correct"]) / len(recent)
         # Blend: 60% recent empirical accuracy, 40% raw
         blended = min(1.0, max(0.0, 0.6 * acc + 0.4 * raw_conf))
@@ -378,8 +374,8 @@ class RecognitionEnsemble:
 
     def __init__(
         self,
-        weights: Optional[Dict[str, float]] = None,
-        calibration: Optional[Calibration] = None,
+        weights: dict[str, float] | None = None,
+        calibration: Calibration | None = None,
     ):
         self.weights = weights or self.DEFAULT_WEIGHTS
         self.calibration = calibration or Calibration()
@@ -395,7 +391,7 @@ class RecognitionEnsemble:
 
     def recognize(self, image: np.ndarray) -> OCRLine:
         """Run all recognizers and combine results."""
-        results: List[OCRLine] = []
+        results: list[OCRLine] = []
         start = time.time()
 
         # Tesseract (always available)
@@ -429,7 +425,7 @@ class RecognitionEnsemble:
         best.elapsed_ms = round(elapsed, 1)
         return best
 
-    def _vote(self, results: List[OCRLine]) -> OCRLine:
+    def _vote(self, results: list[OCRLine]) -> OCRLine:
         """ROVER-style confidence-weighted voting."""
         # Score each result by weight * confidence
         best_score = -1

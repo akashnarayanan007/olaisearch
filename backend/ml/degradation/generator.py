@@ -1,4 +1,4 @@
-﻿"""Main palm-leaf degradation generator.
+"""Main palm-leaf degradation generator.
 
 Generates synthetic palm-leaf manuscript images with:
 1. Realistic palm-leaf texture (Perlin noise)
@@ -6,17 +6,19 @@ Generates synthetic palm-leaf manuscript images with:
 3. Physically-motivated damage layers
 4. Perfect labels (degraded, clean, text, bboxes)
 """
-import numpy as np
-import cv2
-from PIL import Image, ImageDraw, ImageFont
-from typing import Tuple, List, Dict, Any, Optional
-import yaml
 from pathlib import Path
-from scipy.ndimage import map_coordinates, gaussian_filter as scipy_gaussian_filter
+from typing import Any
 
-from backend.ml.degradation.textures import generate_palm_leaf_texture
-from backend.ml.degradation import damage
+import cv2
+import numpy as np
+import yaml
+from PIL import Image, ImageDraw, ImageFont
+from scipy.ndimage import gaussian_filter as scipy_gaussian_filter
+from scipy.ndimage import map_coordinates
+
 from backend.core.logging import get_logger
+from backend.ml.degradation import damage
+from backend.ml.degradation.textures import generate_palm_leaf_texture
 
 logger = get_logger(__name__)
 
@@ -24,7 +26,7 @@ logger = get_logger(__name__)
 class PalmLeafDegradationGenerator:
     """Generate synthetic degraded palm-leaf manuscripts."""
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(self, config_path: str | None = None):
         """Initialize generator.
 
         Args:
@@ -94,11 +96,11 @@ class PalmLeafDegradationGenerator:
 
     def render_text_on_texture(
         self,
-        text_lines: List[str],
+        text_lines: list[str],
         texture: np.ndarray,
-        font_path: Optional[str] = None,
+        font_path: str | None = None,
         seed: int = 42,
-    ) -> Tuple[np.ndarray, np.ndarray, List[Dict[str, int]]]:
+    ) -> tuple[np.ndarray, np.ndarray, list[dict[str, int]]]:
         """Render text on palm-leaf texture with handwriting-style fonts.
 
         Args:
@@ -130,7 +132,7 @@ class PalmLeafDegradationGenerator:
             else:
                 # Fallback to system font
                 font = ImageFont.truetype("arial.ttf", font_size)
-        except:
+        except Exception:
             font = ImageFont.load_default()
             logger.warning("font_load_failed", using="default")
 
@@ -186,11 +188,11 @@ class PalmLeafDegradationGenerator:
 
     def generate(
         self,
-        text_lines: List[str],
+        text_lines: list[str],
         seed: int = 42,
         level: str = "medium",
-        font_path: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        font_path: str | None = None,
+    ) -> dict[str, Any]:
         """Generate a complete degraded palm-leaf manuscript.
 
         Args:
@@ -306,8 +308,8 @@ class PalmLeafDegradationGenerator:
 # CLI interface
 if __name__ == "__main__":
     import argparse
-    from pathlib import Path
     import json
+    from pathlib import Path
 
     parser = argparse.ArgumentParser(description="Generate synthetic palm-leaf manuscripts")
     parser.add_argument("--count", type=int, default=10, help="Number of samples to generate")

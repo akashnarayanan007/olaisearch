@@ -3,18 +3,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import cv2
 import numpy as np
 
-from backend.ml.degradation.generator import PalmLeafDegradationGenerator
 from backend.core.logging import get_logger
+from backend.ml.degradation.generator import PalmLeafDegradationGenerator
 
 logger = get_logger(__name__)
 
 # Sample Tamil text for synthetic data generation
-SAMPLE_TEXTS: List[List[str]] = [
+SAMPLE_TEXTS: list[list[str]] = [
     # Tamil
     ["தமிழ் மொழியில் எழுதப்பட்ட ஓலைச் செய்தாள்", "பழைய கலை நூல்"],
     ["சித்த மருத்துவம் தொடர்பான ஆவணம்", "ஆயுர்வேத மருந்து வகைகள்"],
@@ -43,8 +43,8 @@ class SyntheticDataset:
         self,
         count: int = 100,
         level: str = "medium",
-        scripts: Optional[List[str]] = None,
-    ) -> List[Dict[str, Any]]:
+        scripts: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """Generate synthetic manuscript samples.
 
         Args:
@@ -59,7 +59,7 @@ class SyntheticDataset:
         samples = []
 
         for i in range(count):
-            script = scripts[i % len(script_codes)]
+            script = scripts[i % len(scripts)]
             text_set = self._get_sample_texts_for_script(script)
 
             # Pick random text
@@ -105,7 +105,7 @@ class SyntheticDataset:
         logger.info("synthetic_dataset_generated", count=count, level=level)
         return samples
 
-    def _get_sample_texts_for_script(self, script: str) -> List[List[str]]:
+    def _get_sample_texts_for_script(self, script: str) -> list[list[str]]:
         """Get appropriate sample texts for a script."""
         if script == "tam":
             return SAMPLE_TEXTS[:5]

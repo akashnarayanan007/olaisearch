@@ -1,7 +1,15 @@
-﻿"""Core data models."""
-from datetime import datetime
-from typing import List, Optional, Dict, Any
+"""Core data models."""
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from typing import Any
+
 from pydantic import BaseModel, Field
+
+
+def utcnow() -> datetime:
+    """Return current timezone-aware UTC datetime."""
+    return datetime.now(UTC)
 
 
 class BoundingBox(BaseModel):
@@ -20,6 +28,17 @@ class OCRAlternative(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0)
 
 
+class OCRResult(BaseModel):
+    """OCR recognition result."""
+
+    text: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    char_confidences: list[float] = Field(default_factory=list)
+    alternatives: list[OCRAlternative] = Field(default_factory=list)
+    recognizer: str = "unknown"
+    processing_time_ms: float = 0.0
+
+
 class Line(BaseModel):
     """Text line in a manuscript."""
 
@@ -27,10 +46,10 @@ class Line(BaseModel):
     text: str
     bbox: BoundingBox
     confidence: float = Field(ge=0.0, le=1.0)
-    script: Optional[str] = None
-    alternatives: List[OCRAlternative] = Field(default_factory=list)
-    char_confidences: List[float] = Field(default_factory=list)
-    ocr: Optional[OCRResult] = None
+    script: str | None = None
+    alternatives: list[OCRAlternative] = Field(default_factory=list)
+    char_confidences: list[float] = Field(default_factory=list)
+    ocr: OCRResult | None = None
 
 
 class Manuscript(BaseModel):
@@ -38,24 +57,13 @@ class Manuscript(BaseModel):
 
     id: str
     image_path: str
-    restored_image_path: Optional[str] = None
+    restored_image_path: str | None = None
     language: str
     script: str
-    lines: List[Line] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-
-class OCRResult(BaseModel):
-    """OCR recognition result."""
-
-    text: str
-    confidence: float = Field(ge=0.0, le=1.0)
-    char_confidences: List[float] = Field(default_factory=list)
-    alternatives: List[OCRAlternative] = Field(default_factory=list)
-    recognizer: str = "unknown"
-    processing_time_ms: float = 0.0
+    lines: list[Line] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)
 
 
 class SearchResult(BaseModel):
@@ -66,29 +74,29 @@ class SearchResult(BaseModel):
     text: str
     score: float
     bbox: BoundingBox
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class Citation(BaseModel):
     """Citation in chat response."""
 
     tier: str  # "manuscript", "archive", "background"
-    manuscript_id: Optional[str] = None
-    line_id: Optional[str] = None
+    manuscript_id: str | None = None
+    line_id: str | None = None
     text: str
-    bbox: Optional[BoundingBox] = None
-    confidence: Optional[float] = None
+    bbox: BoundingBox | None = None
+    confidence: float | None = None
 
 
 class ChatResponse(BaseModel):
     """ManuscriptChat response."""
 
     answer: str
-    citations: List[Citation] = Field(default_factory=list)
+    citations: list[Citation] = Field(default_factory=list)
     confidence: float = Field(ge=0.0, le=1.0)
-    evidence_tiers_used: List[str] = Field(default_factory=list)
-    uncertainty_notes: List[str] = Field(default_factory=list)
-    follow_up_suggestions: List[str] = Field(default_factory=list)
+    evidence_tiers_used: list[str] = Field(default_factory=list)
+    uncertainty_notes: list[str] = Field(default_factory=list)
+    follow_up_suggestions: list[str] = Field(default_factory=list)
 
     @property
     def response(self) -> str:

@@ -1,5 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Send, Loader2, Leaf, Archive, BookOpen } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
+import {
+  Archive,
+  BookOpen,
+  Check,
+  Copy,
+  Leaf,
+  Loader2,
+  Send,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react'
 import { chatQuestion } from '../api/client'
 
 const EVIDENCE_ICONS = {
@@ -8,6 +18,13 @@ const EVIDENCE_ICONS = {
   BACKGROUND: BookOpen,
 }
 
+const STARTER_PROMPTS = [
+  'What is the central ethical theme of Line 1?',
+  'Explain the historical date or Saka era mentioned in the colophon.',
+  'Provide a word-by-word transliteration and English translation.',
+  'What medicinal herbs or formulations are specified?',
+]
+
 export default function ChatPage() {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -15,16 +32,17 @@ export default function ChatPage() {
   const [error, setError] = useState(null)
   const [manuscriptId, setManuscriptId] = useState('')
   const [mode, setMode] = useState('leaf')
+  const [copiedIndex, setCopiedIndex] = useState(null)
   const bottomRef = useRef(null)
+  const inputRef = useRef(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, loading])
 
-  const sendMessage = async (e) => {
-    e?.preventDefault()
-    if (!input.trim() || loading) return
-    const question = input.trim()
+  const sendMessage = async (questionText) => {
+    const question = (questionText ?? input).trim()
+    if (!question || loading) return
     setInput('')
     setMessages((prev) => [...prev, { role: 'user', content: question }])
     setLoading(true)
@@ -33,7 +51,7 @@ export default function ChatPage() {
       const data = await chatQuestion(question, { manuscriptId, mode })
       setMessages((prev) => [...prev, { role: 'assistant', content: data }])
     } catch (err) {
-      setError(err.message || 'Chat failed — is the API server running?')
+      setError(err.message || 'Chat failed — is the FastAPI server running?')
       setMessages((prev) => [
         ...prev,
         { role: 'error', content: err.message ?? String(err) },
@@ -50,118 +68,178 @@ export default function ChatPage() {
     }
   }
 
+  const copyMessage = (text, idx) => {
+    navigator.clipboard.writeText(text)
+    setCopiedIndex(idx)
+    setTimeout(() => setCopiedIndex(null), 2000)
+  }
+
+  const clearChat = () => {
+    setMessages([])
+    setError(null)
+  }
+
   return (
-    <div className="space-y-4 h-[calc(100vh-8rem)] flex flex-col">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-serif font-bold text-stone-900">Manuscript Chat</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          Ask questions about indexed manuscripts. Responses show evidence from three tiers.
-        </p>
+    <div className="space-y-4 h-[calc(100vh-10rem)] flex flex-col max-w-5xl mx-auto animate-fade-in">
+      {/* Header bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-1">
+            <ShieldCheck className="w-3.5 h-3.5" /> Three-Tier Grounded Evidence System
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white">
+            Manuscript Research Assistant
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {messages.length > 0 && (
+            <button
+              onClick={clearChat}
+              className="btn-secondary text-xs py-1 px-3 cursor-pointer"
+            >
+              Clear Chat
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Controls bar */}
-      <div className="card p-3 flex flex-wrap items-center gap-3">
+      {/* Scope and Mode Controls */}
+      <div className="card p-3 border border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-stone-500">Manuscript ID:</label>
+          <label className="text-slate-400 font-medium">Focus Folio ID:</label>
           <input
             type="text"
             value={manuscriptId}
             onChange={(e) => setManuscriptId(e.target.value)}
-            placeholder="Optional — search all if empty"
-            className="input-field text-xs py-1 w-48"
+            placeholder="Optional (searches entire corpus if empty)"
+            className="input-field text-xs py-1.5 w-56 sm:w-72 bg-slate-950/80"
           />
         </div>
-        <div className="flex items-center gap-1 ml-auto">
+
+        <div className="flex items-center gap-1.5">
+          <span className="text-slate-400 mr-1 hidden sm:inline">Context Mode:</span>
           {[
-            { key: 'leaf', icon: Leaf, label: 'Leaf text' },
-            { key: 'archive', icon: Archive, label: 'Archive' },
-            { key: 'selection', icon: BookOpen, label: 'Selection' },
+            { key: 'leaf', icon: Leaf, label: 'Leaf Folio' },
+            { key: 'archive', icon: Archive, label: 'Full Archive' },
+            { key: 'selection', icon: BookOpen, label: 'Hermeneutics' },
           ].map(({ key, icon: Icon, label }) => (
             <button
               key={key}
               onClick={() => setMode(key)}
               className={[
-                'flex items-center gap-1 px-2.5 py-1 text-xs rounded-lg transition-colors',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all cursor-pointer font-medium',
                 mode === key
-                  ? 'bg-palm-100 text-palm-800 font-medium'
-                  : 'text-stone-500 hover:bg-stone-100',
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-glow'
+                  : 'bg-slate-950/60 text-slate-400 hover:text-white border border-slate-800',
               ].join(' ')}
             >
-              <Icon className="w-3 h-3" />
-              {label}
+              <Icon className="w-3.5 h-3.5" />
+              <span>{label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 card p-4 overflow-y-auto space-y-4">
+      {/* Chat Messages Canvas */}
+      <div className="flex-1 card p-5 border border-slate-800 bg-slate-900/80 overflow-y-auto space-y-5">
         {messages.length === 0 && (
-          <EmptyState />
+          <div className="text-center py-12 space-y-6">
+            <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto shadow-glow">
+              <Sparkles className="w-7 h-7 text-amber-400" />
+            </div>
+
+            <div className="space-y-2 max-w-md mx-auto">
+              <h3 className="text-lg font-serif font-bold text-white">
+                Grounded Philological Dialogue
+              </h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Ask targeted historical, linguistic, or medical questions about your uploaded manuscripts.
+                Every assertion is verified with citations against the original physical leaf lines.
+              </p>
+            </div>
+
+            {/* Quick Starter Chips */}
+            <div className="pt-2 max-w-xl mx-auto space-y-2">
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider font-mono">
+                Suggested Research Inquiries:
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
+                {STARTER_PROMPTS.map((p, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => sendMessage(p)}
+                    className="p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-amber-500/40 text-xs text-slate-300 hover:text-amber-200 transition-all text-left cursor-pointer group"
+                  >
+                    <span className="text-amber-400 group-hover:translate-x-1 inline-block transition-transform mr-1.5">
+                      →
+                    </span>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
 
         {messages.map((msg, i) => (
-          <MessageBubble key={i} msg={msg} />
+          <MessageBubble
+            key={i}
+            msg={msg}
+            idx={i}
+            copiedIndex={copiedIndex}
+            onCopy={copyMessage}
+          />
         ))}
 
         {loading && (
-          <div className="flex items-center gap-2 text-sm text-stone-400 animate-pulse">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Generating response…
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 animate-pulse w-fit">
+            <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />
+            <span>Analyzing folio lines & verifying citation provenance…</span>
           </div>
         )}
 
         {error && (
-          <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="text-xs text-red-300 bg-red-950/40 border border-red-500/40 rounded-xl p-3">
             {error}
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <form onSubmit={sendMessage} className="flex gap-2">
+      {/* Input controls */}
+      <form onSubmit={(e) => { e.preventDefault(); sendMessage() }} className="relative flex gap-2">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about a manuscript… (e.g. 'What are the herbs mentioned?')"
-          className="input-field flex-1"
+          placeholder="Ask a question about folio text, era, botanical recipes, or grammar…"
+          className="input-field py-3 pl-4 pr-12 text-sm bg-slate-900/90 border-slate-700 focus:border-amber-500"
           disabled={loading}
         />
-        <button type="submit" disabled={loading || !input.trim()} className="btn-primary">
-          <Send className="w-4 h-4" />
+        <button
+          type="submit"
+          disabled={loading || !input.trim()}
+          className="btn-primary px-5 cursor-pointer"
+        >
+          <Send className="w-4 h-4 text-slate-950" />
         </button>
       </form>
     </div>
   )
 }
 
-function EmptyState() {
-  return (
-    <div className="text-center py-12 text-stone-400 space-y-3">
-      <Leaf className="w-10 h-10 mx-auto text-stone-300" />
-      <p className="text-sm font-medium text-stone-500">Ask a question about your manuscripts</p>
-      <div className="text-xs text-stone-400 space-y-1">
-        <p>"What herbs are mentioned in this Siddha text?"</p>
-        <p>"When was this manuscript written?"</p>
-        <p>"Summarize the content in English"</p>
-      </div>
-      <p className="text-xs text-stone-300 italic mt-4">
-        Three-tier evidence: Manuscript → Archive → Background (unverified)
-      </p>
-    </div>
-  )
-}
-
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, idx, copiedIndex, onCopy }) {
   if (msg.role === 'user') {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-lg bg-palm-700 text-white text-sm rounded-xl px-4 py-2.5">
+      <div className="flex justify-end items-start gap-2.5">
+        <div className="max-w-xl bg-gradient-to-r from-amber-600 to-saffron-600 text-slate-950 font-medium text-sm rounded-2xl rounded-tr-none px-4 py-3 shadow-glow">
           {msg.content}
+        </div>
+        <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-xs font-bold text-amber-300 shrink-0">
+          U
         </div>
       </div>
     )
@@ -169,34 +247,51 @@ function MessageBubble({ msg }) {
 
   if (msg.role === 'error') {
     return (
-      <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg p-3">
+      <div className="text-xs text-red-300 bg-red-950/40 border border-red-500/40 rounded-xl p-3.5">
         {msg.content}
       </div>
     )
   }
 
-  // Assistant — render structured response
-  return (
-    <div className="space-y-3">
-      {/* Main response text */}
-      {typeof msg.content === 'string' ? (
-        <p className="text-sm text-stone-700 leading-relaxed bg-stone-50 rounded-lg p-3">
-          {msg.content}
-        </p>
-      ) : (
-        <ResponseStructure data={msg.content} />
-      )}
+  const rawText = typeof msg.content === 'string' ? msg.content : msg.content?.response || JSON.stringify(msg.content)
 
-      {/* Suggested follow-ups */}
-      {msg.followups?.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {msg.followups.map((f, i) => (
-            <span key={i} className="text-xs text-palm-600 bg-palm-50 border border-palm-200 rounded-full px-3 py-1">
-              → {f}
-            </span>
-          ))}
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-amber-500 flex items-center justify-center text-xs font-bold text-white shrink-0 shadow-sm">
+        AI
+      </div>
+
+      <div className="flex-1 space-y-3">
+        <div className="card p-4 border border-slate-800 bg-slate-950/80 rounded-tl-none relative group">
+          <button
+            onClick={() => onCopy(rawText, idx)}
+            className="absolute top-3 right-3 p-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            title="Copy answer"
+          >
+            {copiedIndex === idx ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+
+          {typeof msg.content === 'string' ? (
+            <p className="text-sm text-slate-200 leading-relaxed font-sans">{msg.content}</p>
+          ) : (
+            <ResponseStructure data={msg.content} />
+          )}
         </div>
-      )}
+
+        {/* Suggested follow-up chips */}
+        {msg.followups?.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {msg.followups.map((f, i) => (
+              <span
+                key={i}
+                className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-full px-3 py-1 cursor-pointer hover:bg-amber-500/20 transition-colors"
+              >
+                → {f}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -205,46 +300,68 @@ function ResponseStructure({ data }) {
   if (!data) return null
 
   const renderEvidenceTier = (tier, items) => {
-    if (!items || items.length === 0) return null
+    if (!items || (Array.isArray(items) && items.length === 0)) return null
     const Icon = EVIDENCE_ICONS[tier] || Leaf
-    return (
-      <div className={`border-l-4 px-3 py-2 rounded ${
-        tier === 'MANUSCRIPT' ? 'border-palm-500 bg-palm-50'
-        : tier === 'ARCHIVE' ? 'border-blue-400 bg-blue-50'
-        : 'border-amber-400 bg-amber-50'
-      }`}>
-        <div className="flex items-center gap-1.5 text-xs font-medium text-stone-500 mb-1">
-          <Icon className="w-3 h-3" />
-          {tier.replace('_', ' ')} Evidence
-        </div>
-        {Array.isArray(items) ? (
-          <ul className="text-xs text-stone-700 space-y-0.5 list-disc list-inside">
-            {items.map((item, i) => (
-              <li key={i} className="font-mono break-all">{item}</li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-xs font-mono text-stone-700">{items}</p>
-        )}
-      </div>
-    )
-  }
+
+    const config =
+      tier === 'MANUSCRIPT'
+        ? {
+            label: 'Tier 1: Manuscript Folio Line Evidence',
+            border: 'border-l-emerald-500 bg-emerald-950/20 text-emerald-200',
+            badge: 'badge-emerald',
+          }
+        : tier === 'ARCHIVE'
+        ? {
+            label: 'Tier 2: Archive Corpus Passage',
+            border: 'border-l-sky-500 bg-sky-950/20 text-sky-200',
+            badge: 'badge-indigo',
+          }
+        : {
+            label: 'Tier 3: Historical Philology Context',
+            border: 'border-l-purple-500 bg-purple-950/20 text-purple-200',
+            badge: 'badge-palm',
+          }
 
   return (
-    <div className="text-sm text-stone-700 space-y-2">
-      {data.response && (
-        <p className="leading-relaxed">{data.response}</p>
+    <div className={`border-l-4 px-3.5 py-2.5 rounded-r-xl border border-slate-800/80 ${config.border} space-y-1 mt-2`}>
+      <div className="flex items-center gap-1.5 text-xs font-semibold">
+        <Icon className="w-3.5 h-3.5" />
+        <span>{config.label}</span>
+      </div>
+      {Array.isArray(items) ? (
+        <ul className="text-xs font-mono space-y-1 list-disc list-inside">
+          {items.map((item, i) => (
+            <li key={i} className="leading-relaxed">{item}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs font-mono leading-relaxed">{items}</p>
       )}
+    </div>
+  )
+}
+
+  return (
+    <div className="text-sm text-slate-200 space-y-3">
+      {data.response && (
+        <div className="leading-relaxed font-sans">{data.response}</div>
+      )}
+
       {renderEvidenceTier('MANUSCRIPT', data.manuscript_evidence)}
       {renderEvidenceTier('ARCHIVE', data.archive_evidence)}
       {renderEvidenceTier('BACKGROUND', data.background)}
+
       {data.unverified_background && (
-        <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
-          <strong>Unverified background:</strong> {data.unverified_background}
+        <div className="text-xs text-amber-300/90 bg-amber-950/30 border border-amber-500/40 rounded-xl p-3">
+          <strong className="block text-amber-200 uppercase text-[10px] tracking-wider mb-1">
+            Historical Background (Unverified against leaf):
+          </strong>
+          {data.unverified_background}
         </div>
       )}
+
       {data.no_evidence && (
-        <p className="text-xs text-stone-400 italic">{data.no_evidence}</p>
+        <p className="text-xs text-slate-400 italic">{data.no_evidence}</p>
       )}
     </div>
   )

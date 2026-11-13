@@ -1,21 +1,20 @@
 """Tests for the segmentation pipeline."""
 from __future__ import annotations
 
+import cv2
 import numpy as np
 import pytest
-import cv2
 
 from backend.pipeline.segmentation import (
-    ProjectionProfileSegmenter,
-    PipelineSegmenter,
     KrakenSegmenter,
     LearnedSegmenter,
+    PipelineSegmenter,
+    ProjectionProfileSegmenter,
     SegmentedLine,
     compute_iou,
-    match_segments,
     compute_prf1,
+    match_segments,
 )
-
 
 # ─── fixtures ─────────────────────────────────────────────────────────────────
 
@@ -58,7 +57,7 @@ def test_segment_returns_lines(segmenter, grid_image):
 
 def test_segment_sorts_by_reading_order(segmenter, grid_image):
     lines = segmenter.segment(grid_image)
-    ys = [l.y for l in lines]
+    ys = [item.y for item in lines]
     assert ys == sorted(ys), "Lines should be sorted top-to-bottom"
 
 
